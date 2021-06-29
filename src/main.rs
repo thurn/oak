@@ -20,11 +20,16 @@ use std::iter;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use yew::prelude::*;
+use yew::services;
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+fn olog(msg: &str) {
+    services::ConsoleService::info(format!("Log: {:?}", msg).as_str());
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter, PartialOrd, Ord)]
 enum Suit {
-    Clubs,
     Diamonds,
+    Clubs,
     Hearts,
     Spades,
 }
@@ -44,8 +49,8 @@ impl fmt::Display for Suit {
             f,
             "{}",
             match self {
-                Suit::Clubs => "♣",
                 Suit::Diamonds => "♦",
+                Suit::Clubs => "♣",
                 Suit::Hearts => "♥",
                 Suit::Spades => "♠",
             }
@@ -53,7 +58,7 @@ impl fmt::Display for Suit {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter, PartialOrd, Ord)]
 enum Rank {
     Two,
     Three,
@@ -94,7 +99,7 @@ impl fmt::Display for Rank {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, PartialOrd, Ord)]
 struct Card {
     suit: Suit,
     rank: Rank,
@@ -124,18 +129,55 @@ struct Hand {
 }
 
 impl Hand {
-    pub fn new(cards: Vec<Card>) -> Hand {
-        Hand { cards }
+    pub fn new(mut cards: Vec<Card>) -> Hand {
+        cards.sort();
+        Hand {
+            cards
+        }
     }
 
     pub fn remove(&mut self, index: usize) -> Card {
         self.cards.remove(index)
+    }
+
+    pub fn pick_lead(&self) -> Option<usize> {
+        olog("Picking lead");
+        self.cards
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, &value)| value)
+            .map(|(idx, _)| idx)
+    }
+
+    pub fn pick_play(&self, suit: Suit) -> Option<usize> {
+        if self.cards.iter().filter(|c| c.suit == suit).count() > 0 {
+            olog("Following suit");
+            self.cards
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| c.suit == suit)
+                .max_by_key(|(_, &value)| value)
+                .map(|(idx, _)| idx)
+        } else {
+            olog("Discarding");
+            self.cards
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, &value)| value)
+                .map(|(idx, _)| idx)
+        }
     }
 }
 
 struct Trick {
     pub lead: Position,
     pub played: HashMap<Position, Card>,
+}
+
+impl Trick {
+    pub fn winner(&self) -> Option<Position> {
+        self.played.iter().max_by_key(|(_, card)| *card).map(|(position, _)| *position)
+    }
 }
 
 struct Game {
@@ -174,6 +216,19 @@ impl Game {
     pub fn play_card(&mut self, position: Position, index: usize) {
         let card = self.hands.get_mut(&position).unwrap().remove(index);
         self.trick.played.insert(position, card);
+    }
+
+    pub fn play_position(&mut self, position: Position) {
+        if self.trick.lead == position {
+            let index = self.hands.get(&position).unwrap().pick_lead().unwrap();
+            self.play_card(position, index);
+        } else {
+            let lead = self.trick.played.get(&self.trick.lead).unwrap().suit;
+            self.play_card(
+                position,
+                self.hands.get(&position).unwrap().pick_play(lead).unwrap(),
+            );
+        }
     }
 }
 
@@ -244,8 +299,14 @@ impl Model {
     }
 
     fn render_trick(&self, trick: &Trick) -> Html {
+        let callback = if trick.played.keys().len() == 4 {
+            Some(self.link.callback(move |_| Msg::Continue))
+        } else {
+            None
+        };
+
         html! {
-            <div class="trick">
+            <div class="trick" onclick=callback>
                 {self.render_play(trick, &trick.lead).unwrap_or_default()}
                 {self.render_play(trick, &trick.lead.next()).unwrap_or_default()}
                 {self.render_play(trick, &trick.lead.next().next()).unwrap_or_default()}
@@ -258,6 +319,7 @@ impl Model {
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub enum Msg {
     Play(Position, usize),
+    Continue
 }
 
 impl Component for Model {
@@ -274,7 +336,22 @@ impl Component for Model {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Play(position, index) => {
+                olog("Playing");
                 self.game.play_card(position, index);
+                olog("AI move");
+                if self.game.trick.played.keys().len() < 4 {
+                    self.game.play_position(position.next());
+                }
+                true
+            },
+            Msg::Continue => {
+                let winner = self.game.trick.winner().unwrap();
+                self.game.trick.played.clear();
+                self.game.trick.lead = winner;
+                if winner == Position::Left || winner == Position::Right {
+                    self.game.play_position(winner);
+                }
+
                 true
             }
         }
