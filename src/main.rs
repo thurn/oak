@@ -131,9 +131,7 @@ struct Hand {
 impl Hand {
     pub fn new(mut cards: Vec<Card>) -> Hand {
         cards.sort();
-        Hand {
-            cards
-        }
+        Hand { cards }
     }
 
     pub fn remove(&mut self, index: usize) -> Card {
@@ -176,11 +174,21 @@ struct Trick {
 
 impl Trick {
     pub fn winner(&self) -> Option<Position> {
-        self.played.iter().max_by_key(|(_, card)| *card).map(|(position, _)| *position)
+        self.played
+            .iter()
+            .max_by_key(|(_, card)| *card)
+            .map(|(position, _)| *position)
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+enum GamePhase {
+    Bidding,
+    Playing,
+}
+
 struct Game {
+    pub phase: GamePhase,
     pub hands: HashMap<Position, Hand>,
     pub trick: Trick,
 }
@@ -205,6 +213,7 @@ impl Game {
         hands.insert(Position::Right, Hand::new(chunks.next().unwrap().to_vec()));
 
         Game {
+            phase: GamePhase::Bidding,
             hands,
             trick: Trick {
                 lead: Position::User,
@@ -239,7 +248,7 @@ pub struct Model {
 
 impl Model {
     fn render_card(&self, card: &Card, on_click: Option<Msg>, classes: Classes) -> Html {
-        let mut class = classes!("card", "shown");
+        let mut class = classes!("card", "shown", "vertical");
         class.extend(classes);
 
         class.push(if card.suit.is_red() { "red" } else { "black" });
@@ -274,10 +283,15 @@ impl Model {
         }
     }
 
-    fn render_hidden_card(&self) -> Html {
+    fn render_hidden_card(&self, position: Position) -> Html {
+        let mut classes = classes!("card", "hidden");
+        classes.push(match position {
+            Position::User | Position::Partner => "vertical",
+            Position::Left | Position::Right => "horizontal",
+        });
         html! {
             <div class="card-wrapper">
-                <div class="card hidden">
+                <div class=classes>
                     <div class="card-back" />
                 </div>
             </div>
@@ -299,6 +313,10 @@ impl Model {
     }
 
     fn render_trick(&self, trick: &Trick) -> Html {
+        if self.game.phase == GamePhase::Bidding {
+            return html! {}
+        }
+
         let callback = if trick.played.keys().len() == 4 {
             Some(self.link.callback(move |_| Msg::Continue))
         } else {
@@ -306,7 +324,7 @@ impl Model {
         };
 
         html! {
-            <div class="trick" onclick=callback>
+            <div class="center trick" onclick=callback>
                 {self.render_play(trick, &trick.lead).unwrap_or_default()}
                 {self.render_play(trick, &trick.lead.next()).unwrap_or_default()}
                 {self.render_play(trick, &trick.lead.next().next()).unwrap_or_default()}
@@ -314,12 +332,49 @@ impl Model {
             </div>
         }
     }
+
+    fn render_partner_hand(&self) -> Html {
+        if self.game.phase == GamePhase::Bidding {
+            html! {
+                <div class="hand user">
+                    { for iter::repeat(self.render_hidden_card(Position::Partner))
+                        .take(self.game.hands[&Position::Partner].cards.len())}
+                </div>
+            }
+        } else {
+            html! {
+                <div class="hand user">
+                    { for self.game.hands[&Position::Partner].cards.iter()
+                        .enumerate().map(|e| self.render_card_wrapper(e, Position::Partner))
+                    }
+                </div>
+            }
+        }
+    }
+
+    fn render_bidding_buttons(&self) -> Html {
+        if self.game.phase == GamePhase::Bidding {
+            html! {
+                <div class="center">
+                    <div class="bidding">
+                        <button class="bid red">{"♦?"}</button>
+                        <button class="bid">{"♣?"}</button>
+                        <button class="bid red">{"♥?"}</button>
+                        <button class="bid">{"♠?"}</button>
+                        <button class="bid">{"(?)"}</button>
+                    </div>
+                </div>
+            }
+        } else {
+            html! {}
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub enum Msg {
     Play(Position, usize),
-    Continue
+    Continue,
 }
 
 impl Component for Model {
@@ -343,7 +398,7 @@ impl Component for Model {
                     self.game.play_position(position.next());
                 }
                 true
-            },
+            }
             Msg::Continue => {
                 let winner = self.game.trick.winner().unwrap();
                 self.game.trick.played.clear();
@@ -364,23 +419,23 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div class="content">
-                <div class="hand">
-                    { for self.game.hands[&Position::Partner].cards.iter()
-                        .enumerate().map(|e| self.render_card_wrapper(e, Position::Partner))
-                    }
-                </div>
+                {self.render_partner_hand()}
                 <div class="main">
-                    <div class="opponent">
-                        { for iter::repeat(self.render_hidden_card()).take(self.game.hands[&Position::Left].cards.len())}
+                    <div class="hand opponent">
+                        { for iter::repeat(self.render_hidden_card(Position::Left))
+                            .take(self.game.hands[&Position::Left].cards.len())}
                     </div>
 
                     {self.render_trick(&self.game.trick)}
+                    {self.render_bidding_buttons()}
 
-                    <div class="opponent">
-                        { for iter::repeat(self.render_hidden_card()).take(self.game.hands[&Position::Right].cards.len())}
+                    <div class="hand opponent">
+                        { for iter::repeat(self.render_hidden_card(Position::Right))
+                            .take(self.game.hands[&Position::Right].cards.len())}
                     </div>
+
                 </div>
-                <div class="hand">
+                <div class="hand user">
                     { for self.game.hands[&Position::User].cards.iter()
                         .enumerate().map(|e| self.render_card_wrapper(e, Position::User))
                     }

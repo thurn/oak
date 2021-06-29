@@ -27,7 +27,7 @@ $card-border-radius: 4px;
     align-items: center;
 }
 
-.hand {
+.hand.user {
     align-content: center;
     max-width: 60vmin;
     margin: 1vmin;
@@ -35,7 +35,7 @@ $card-border-radius: 4px;
     border-radius: $card-border-radius;
 }
 
-.opponent {
+.hand.opponent {
     flex-direction: column;
     max-height: 50vmin;
     background-color: black;
@@ -84,14 +84,12 @@ $card-border-radius: 4px;
     }
 }
 
-.card.shown {
+.card.vertical {
     width: $card-width;
     height: $card-height;
 }
 
 .card.hidden {
-    width: $card-height * 0.75;
-    height: $card-width * 0.75;
     align-items: stretch;
 
     .card-back {
@@ -99,6 +97,11 @@ $card-border-radius: 4px;
         flex-grow: 1;
         border-radius: $card-border-radius;
     }
+}
+
+.card.horizontal {
+    width: $card-height * 0.75;
+    height: $card-width * 0.75;
 }
 
 .card.ten {
@@ -113,26 +116,10 @@ $card-border-radius: 4px;
     color: black;
 }
 
-.trick {
+.center {
     position: relative;
     width: 100%;
     height: 100%;
-
-    .first {
-        z-index: 2;
-    }
-
-    .second {
-        z-index: 3;
-    }
-
-    .third {
-        z-index: 4;
-    }
-
-    .fourth {
-        z-index: 5;
-    }
 
     .user-play {
         position: absolute;
@@ -160,5 +147,23 @@ $card-border-radius: 4px;
         top: 50%;
         left: 60%;
         transform: translate(-50%, -50%);
+    }
+
+    .bidding {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, 0);
+
+        button.bid {
+            padding: 1vmin;
+            margin: 1vmin;
+            border-radius: 1vmin;
+            font-size: 5vmin;
+        }
+
+        button.bid.red {
+            color: red;
+        }
     }
 }
