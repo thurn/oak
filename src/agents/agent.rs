@@ -1,4 +1,4 @@
-// Copyright © 2020-present Derek Thurn
+// Copyright © 2021-present Derek Thurn
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Entry point to the magical world of Oak
+//! Defines the trait implemented by all AI agents
 
-#![deny(warnings)]
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
+use crate::model::{
+    game::Game,
+    primitives::{CardId, Position},
+};
 
-mod agents;
-mod game;
-mod model;
-mod ui;
-
-fn main() {
-    yew::start_app::<ui::Model>();
+pub trait Agent {
+    /// Invoked during the Play phase when it's the agent's turn to play a
+    /// card, either to lead a new trick or to follow an existing one. Should
+    /// return the index of a card in hand to play.
+    fn select_play(&self, game: &Game, position: Position) -> usize;
 }

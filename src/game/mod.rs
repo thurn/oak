@@ -1,4 +1,4 @@
-// Copyright © 2020-present Derek Thurn
+// Copyright © 2021-present Derek Thurn
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Entry point to the magical world of Oak
+//! Functions related to playing an individual game within a run
 
-#![deny(warnings)]
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
-mod agents;
-mod game;
-mod model;
-mod ui;
-
-fn main() {
-    yew::start_app::<ui::Model>();
-}
+pub mod deck;
+pub mod play_phase;
+pub mod test_helpers;
