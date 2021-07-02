@@ -20,10 +20,12 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 
 use crate::{
+    agents::constant::ConstantAgent,
     game::deck,
     model::{
-        game::Game,
-        primitives::{Card, Rank, Suit},
+        game::{Game, Trick},
+        primitives::{Card, GamePhase, Position, Rank, Suit},
+        state::State,
     },
 };
 
@@ -44,3 +46,24 @@ pub const USER_CARD_0: Card = Card {
     suit: Suit::Clubs,
     rank: Rank::Ten,
 };
+
+/// Creates a [State] using [create_test_game] and [ConstantAgent]
+pub fn create_test_state() -> State {
+    State {
+        game: create_test_game(),
+        agent: Box::from(ConstantAgent {}),
+    }
+}
+
+/// Creates a new game in the 'game over' state
+pub fn create_empty_game() -> Game {
+    Game {
+        phase: GamePhase::Playing,
+        trick: Trick::new(Position::User),
+        trump: None,
+        user_hand: vec![],
+        dummy_hand: vec![],
+        left_opponent_hand: vec![],
+        right_opponet_hand: vec![],
+    }
+}

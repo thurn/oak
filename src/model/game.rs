@@ -31,8 +31,8 @@ pub struct Trick {
 }
 
 impl Trick {
-    pub fn new(lead: Position) -> Trick {
-        Trick {
+    pub fn new(lead: Position) -> Self {
+        Self {
             lead,
             user_play: None,
             dummy_play: None,
@@ -41,6 +41,7 @@ impl Trick {
         }
     }
 
+    /// Gets the [Card] played by a [Position], if any
     pub fn card_played(&self, position: Position) -> Option<Card> {
         match position {
             Position::User => self.user_play,
@@ -50,6 +51,7 @@ impl Trick {
         }
     }
 
+    /// Sets the [Card] played by a [Position]
     pub fn set_card_played(&mut self, position: Position, card: Card) {
         match position {
             Position::User => self.user_play = Some(card),
@@ -76,16 +78,15 @@ impl Trick {
         .into_iter()
     }
 
-    /// Returns the [Position] which is next to play to this trick, or None if
-    /// the trick has been completed
-    pub fn current_turn(&self) -> Option<Position> {
-        self.turn_order().find(|p| self.card_played(*p).is_none())
-    }
-
-    // Returns all of the positions & cards played to the current trick, in turn order
+    /// Returns all of the positions & cards played to the current trick, in turn order
     pub fn cards(&self) -> impl Iterator<Item = (Position, Card)> + '_ {
         self.turn_order()
             .filter_map(move |position| self.card_played(position).map(|card| (position, card)))
+    }
+
+    /// Returns true if all four cards have been played to this trick
+    pub fn is_completed(&self) -> bool {
+        self.cards().count() == 4
     }
 }
 
@@ -149,19 +150,6 @@ mod tests {
             Position::User,
             Position::Left
         ]));
-    }
-
-    #[test]
-    fn test_current_turn() {
-        let mut t = Trick::new(Position::Dummy);
-        assert_eq!(t.current_turn(), Some(Position::Dummy));
-        t.set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
-        assert_eq!(t.current_turn(), Some(Position::Right));
-        t.set_card_played(Position::Right, Card::new(Suit::Clubs, Rank::Three));
-        t.set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Four));
-        assert_eq!(t.current_turn(), Some(Position::Left));
-        t.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
-        assert_eq!(t.current_turn(), None);
     }
 
     #[test]

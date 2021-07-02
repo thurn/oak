@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functions related to playing an individual game within a run
+@import
+    "src/interface/bid",
+    "src/interface/game",
+    "src/interface/main";
 
-pub mod bidding_phase;
-pub mod deck;
-pub mod play_phase;
-pub mod test_helpers;
+body {
+    * {
+        display: flex;
+        box-sizing: border-box;
+    }
+}

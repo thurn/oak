@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functions related to playing an individual game within a run
+//! HTML user interface rendering
 
-pub mod bidding_phase;
-pub mod deck;
-pub mod play_phase;
-pub mod test_helpers;
+pub mod bid;
+pub mod game;
+pub mod main;

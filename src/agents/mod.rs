@@ -15,4 +15,5 @@
 //! Game AI code
 
 pub mod agent;
+pub mod constant;
 pub mod heuristic;

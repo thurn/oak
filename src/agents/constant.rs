@@ -12,9 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functions related to playing an individual game within a run
+//! The constant agent always selects the first legal play available to it
 
-pub mod bidding_phase;
-pub mod deck;
-pub mod play_phase;
-pub mod test_helpers;
+use crate::{
+    game::play_phase,
+    model::{game::Game, primitives::Position},
+};
+
+use super::agent::Agent;
+
+#[derive(Debug)]
+pub struct ConstantAgent;
+
+impl Agent for ConstantAgent {
+    fn select_play(&self, game: &Game, position: Position) -> usize {
+        play_phase::legal_plays(game, position)
+            .map(|(i, _)| i)
+            .next()
+            .expect("No legal plays")
+    }
+}

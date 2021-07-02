@@ -12,9 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functions related to playing an individual game within a run
+.bid__bidding-controls {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
 
-pub mod bidding_phase;
-pub mod deck;
-pub mod play_phase;
-pub mod test_helpers;
+.bid__bidding-controls__bid-button {
+    padding: 1vmin;
+    margin: 1vmin;
+    border-radius: 1vmin;
+    font-size: 5vmin;
+}
+
+.bid__bidding-controls__bid-button--black {
+    color: black;
+}
+
+.bid__bidding-controls__bid-button--red {
+    color: red;
+}

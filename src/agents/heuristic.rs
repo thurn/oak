@@ -26,7 +26,8 @@ use crate::{
 
 use super::agent::Agent;
 
-struct HeuristicAgent;
+#[derive(Debug)]
+pub struct HeuristicAgent;
 
 impl Agent for HeuristicAgent {
     /// Wins the trick if possible & partner is not already winning, otherwise discards
@@ -60,7 +61,7 @@ fn find_discard(game: &Game, position: Position) -> usize {
     play_phase::legal_plays(game, position)
         .min_by(|(_, a), (_, b)| play_phase::compare_card_power(game, *a, *b))
         .map(|(index, _)| index)
-        .expect("No cards in hand")
+        .expect("No legal plays")
 }
 
 #[cfg(test)]

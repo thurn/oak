@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functions related to playing an individual game within a run
+//! Functions for implementing the bidding phase of a game
 
-pub mod bidding_phase;
-pub mod deck;
-pub mod play_phase;
-pub mod test_helpers;
+use crate::model::{primitives::Bid, state::State};
+
+pub fn resolve_bid_action(state: &mut State, bid: Bid) {}

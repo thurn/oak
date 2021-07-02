@@ -31,7 +31,7 @@ pub enum Suit {
 
 impl Suit {
     /// True if this is a red suit, false if it's black
-    fn is_red(&self) -> bool {
+    pub fn is_red(&self) -> bool {
         match self {
             Suit::Clubs | Suit::Spades => false,
             Suit::Diamonds | Suit::Hearts => true,
@@ -105,8 +105,8 @@ pub struct Card {
 }
 
 impl Card {
-    pub fn new(suit: Suit, rank: Rank) -> Card {
-        Card { suit, rank }
+    pub fn new(suit: Suit, rank: Rank) -> Self {
+        Self { suit, rank }
     }
 }
 
@@ -121,22 +121,29 @@ pub enum Position {
 
 impl Position {
     /// Returns the next position in turn sequence after this one
-    pub fn next(&self) -> Position {
+    pub fn next(&self) -> Self {
         match self {
-            Position::User => Position::Left,
-            Position::Left => Position::Dummy,
-            Position::Dummy => Position::Right,
-            Position::Right => Position::User,
+            Self::User => Self::Left,
+            Self::Left => Self::Dummy,
+            Self::Dummy => Self::Right,
+            Self::Right => Self::User,
         }
     }
 
     /// Returns the partner position of this position
-    pub fn partner(&self) -> Position {
+    pub fn partner(&self) -> Self {
         match self {
-            Position::User => Position::Dummy,
-            Position::Left => Position::Right,
-            Position::Dummy => Position::User,
-            Position::Right => Position::Left,
+            Self::User => Self::Dummy,
+            Self::Left => Self::Right,
+            Self::Dummy => Self::User,
+            Self::Right => Self::Left,
+        }
+    }
+
+    pub fn is_agent(&self) -> bool {
+        match self {
+            Self::User | Self::Dummy => false,
+            Self::Left | Self::Right => true,
         }
     }
 }
@@ -156,9 +163,16 @@ pub struct CardId {
 }
 
 impl CardId {
-    pub fn new(position: Position, index: usize) -> CardId {
-        CardId { position, index }
+    pub fn new(position: Position, index: usize) -> Self {
+        Self { position, index }
     }
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+pub enum Bid {
+    Suit(Suit),
+    Query,
+    Pass,
 }
 
 #[cfg(test)]
