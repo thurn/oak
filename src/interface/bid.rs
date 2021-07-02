@@ -16,9 +16,8 @@
 
 use yew::prelude::*;
 
-use crate::{interface::bid, model::game::Game};
-
 use super::main::Oak;
+use crate::{interface::bid, model::game::Game};
 
 pub fn bidding_controls(link: &ComponentLink<Oak>, game: &Game) -> Html {
     let red = "bid__bidding-controls__bid-button bid__bidding-controls__bid-button--red";

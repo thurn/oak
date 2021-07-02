@@ -42,13 +42,10 @@ pub fn create_test_game() -> Game {
     deck::new_game(&mut Pcg64::seed_from_u64(17))
 }
 
-pub const USER_CARD_0: Card = Card {
-    suit: Suit::Clubs,
-    rank: Rank::Two,
-};
+pub const USER_CARD_0: Card = Card { suit: Suit::Clubs, rank: Rank::Two };
 
-/// Creates a [State] using [create_test_game] and [ConstantAgent], using the same
-/// configuration:
+/// Creates a [State] using [create_test_game] and [ConstantAgent], using the
+/// same configuration:
 /// - Trump: None
 /// - Phase: Bidding
 /// - Lead: User
@@ -58,10 +55,7 @@ pub const USER_CARD_0: Card = Card {
 ///   - Dummy: ♦6 ♦7 ♦8 ♦K  ♣5 ♣K ♥4 ♥7  ♥J ♥Q ♠4 ♠5 ♠10
 ///   - Right: ♦4 ♦5 ♦J ♦A  ♣3 ♣7 ♣J ♣Q  ♥2 ♥3 ♠9 ♠J ♠Q
 pub fn create_test_state() -> State {
-    State {
-        game: create_test_game(),
-        agent: Box::from(ConstantAgent {}),
-    }
+    State { game: create_test_game(), agent: Box::from(ConstantAgent {}) }
 }
 
 /// Creates a new game in the 'game over' state

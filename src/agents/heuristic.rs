@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Defines a simple agent which uses fixed heuristics to decide on its game actions
+//! Defines a simple agent which uses fixed heuristics to decide on its game
+//! actions
 
 use std::cmp::Ordering;
 
+use super::agent::Agent;
 use crate::{
     game::play_phase,
     model::{
@@ -24,13 +26,12 @@ use crate::{
     },
 };
 
-use super::agent::Agent;
-
 #[derive(Debug)]
 pub struct HeuristicAgent;
 
 impl Agent for HeuristicAgent {
-    /// Wins the trick if possible & partner is not already winning, otherwise discards
+    /// Wins the trick if possible & partner is not already winning, otherwise
+    /// discards
     fn select_play(&self, game: &Game, position: Position) -> usize {
         let winner =
             if play_phase::trick_winner(game).map_or(true, |(w, _)| w != position.partner()) {
@@ -43,28 +44,25 @@ impl Agent for HeuristicAgent {
     }
 }
 
-/// Returns the position of the highest power card in hand which can win the current
-/// trick, if any, returning higher rank cards later in hand in the event of a tie
+/// Returns the position of the highest power card in hand which can win the
+/// current trick, if any, returning higher rank cards later in hand in the
+/// event of a tie
 fn find_winning_card(game: &Game, position: Position) -> Option<usize> {
     play_phase::winning_plays(game, position)
-        .max_by(
-            |(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
-                Ordering::Equal => a.rank.cmp(&b.rank),
-                ordering => ordering,
-            },
-        )
+        .max_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
+            Ordering::Equal => a.rank.cmp(&b.rank),
+            ordering => ordering,
+        })
         .map(|(index, _)| index)
 }
 
 /// Discards the lowest-ranking card, either following suit or throwing off
 fn find_discard(game: &Game, position: Position) -> usize {
     play_phase::legal_plays(game, position)
-        .min_by(
-            |(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
-                Ordering::Equal => a.rank.cmp(&b.rank),
-                ordering => ordering,
-            },
-        )
+        .min_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
+            Ordering::Equal => a.rank.cmp(&b.rank),
+            ordering => ordering,
+        })
         .map(|(index, _)| index)
         .expect("No legal plays")
 }
@@ -73,12 +71,11 @@ fn find_discard(game: &Game, position: Position) -> usize {
 mod tests {
     use strum::IntoEnumIterator;
 
+    use super::*;
     use crate::{
         game::test_helpers,
         model::primitives::{Card, Rank, Suit},
     };
-
-    use super::*;
 
     #[test]
     fn test_select_play() {
@@ -89,10 +86,7 @@ mod tests {
         assert_eq!(g.user_hand[p1], Card::new(Suit::Hearts, Rank::Ace));
         play_phase::play_card(&mut g, CardId::new(Position::User, p1));
         let p2 = agent.select_play(&g, Position::Left);
-        assert_eq!(
-            g.left_opponent_hand[p2],
-            Card::new(Suit::Hearts, Rank::Five)
-        );
+        assert_eq!(g.left_opponent_hand[p2], Card::new(Suit::Hearts, Rank::Five));
         play_phase::play_card(&mut g, CardId::new(Position::Left, p2));
         let p3 = agent.select_play(&g, Position::Dummy);
         assert_eq!(g.dummy_hand[p3], Card::new(Suit::Hearts, Rank::Four));

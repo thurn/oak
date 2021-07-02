@@ -18,7 +18,7 @@ use std::iter;
 
 use strum::IntoEnumIterator;
 
-use super::primitives::{Card, GamePhase, Position, Suit};
+use crate::model::primitives::{Card, GamePhase, Position, Suit};
 
 /// The current trick being played
 #[derive(Debug, PartialEq, Eq)]
@@ -32,13 +32,7 @@ pub struct Trick {
 
 impl Trick {
     pub fn new(lead: Position) -> Self {
-        Self {
-            lead,
-            user_play: None,
-            dummy_play: None,
-            left_play: None,
-            right_play: None,
-        }
+        Self { lead, user_play: None, dummy_play: None, left_play: None, right_play: None }
     }
 
     /// Gets the [Card] played by a [Position], if any
@@ -69,16 +63,12 @@ impl Trick {
     /// Returns an iterator over the 4 positions in this trick in order,
     /// starting with the lead position
     pub fn turn_order(&self) -> impl Iterator<Item = Position> {
-        vec![
-            self.lead,
-            self.lead.next(),
-            self.lead.next().next(),
-            self.lead.next().next().next(),
-        ]
-        .into_iter()
+        vec![self.lead, self.lead.next(), self.lead.next().next(), self.lead.next().next().next()]
+            .into_iter()
     }
 
-    /// Returns all of the positions & cards played to the current trick, in turn order
+    /// Returns all of the positions & cards played to the current trick, in
+    /// turn order
     pub fn cards(&self) -> impl Iterator<Item = (Position, Card)> + '_ {
         self.turn_order()
             .filter_map(move |position| self.card_played(position).map(|card| (position, card)))
@@ -124,18 +114,14 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::primitives::Rank;
-
     use super::*;
+    use crate::model::primitives::Rank;
 
     #[test]
     fn test_lead_suit() {
         assert_eq!(Trick::new(Position::Dummy).lead_suit(), None);
         let trick = Trick {
-            dummy_play: Some(Card {
-                suit: Suit::Diamonds,
-                rank: Rank::Four,
-            }),
+            dummy_play: Some(Card { suit: Suit::Diamonds, rank: Rank::Four }),
             ..Trick::new(Position::Dummy)
         };
         assert_eq!(trick.lead_suit(), Some(Suit::Diamonds));
@@ -161,8 +147,6 @@ mod tests {
         t.set_card_played(Position::Dummy, c2);
         assert!(t.cards().eq(vec![(Position::Dummy, c2)]));
         t.set_card_played(Position::Right, c3);
-        assert!(t
-            .cards()
-            .eq(vec![(Position::Dummy, c2), (Position::Right, c3)]));
+        assert!(t.cards().eq(vec![(Position::Dummy, c2), (Position::Right, c3)]));
     }
 }

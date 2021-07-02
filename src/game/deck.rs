@@ -18,7 +18,6 @@ use std::{collections::HashMap, slice::ChunksExact};
 
 use rand::{prelude::SliceRandom, Rng, SeedableRng};
 use rand_pcg::Pcg64;
-
 use strum::IntoEnumIterator;
 
 use crate::model::{
@@ -26,7 +25,8 @@ use crate::model::{
     primitives::{Card, GamePhase, Position, Rank, Suit},
 };
 
-/// Creates a new [Game] in the [GamePhase::Bidding] state, dealing hands to the four positions
+/// Creates a new [Game] in the [GamePhase::Bidding] state, dealing hands to the
+/// four positions
 pub fn new_game(rng: &mut impl Rng) -> Game {
     let mut cards = Vec::new();
     for suit in Suit::iter() {
@@ -56,9 +56,8 @@ pub fn new_game(rng: &mut impl Rng) -> Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::test_helpers;
-
     use super::*;
+    use crate::game::test_helpers;
 
     #[test]
     fn test_new_game() {

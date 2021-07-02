@@ -67,9 +67,7 @@ pub fn hand_row(link: &ComponentLink<Oak>, game: &Game, position: Position, hidd
     let legal_plays = if game.phase == GamePhase::Bidding {
         HashSet::new()
     } else {
-        play_phase::legal_plays(game, position)
-            .map(|(index, _)| index)
-            .collect::<HashSet<usize>>()
+        play_phase::legal_plays(game, position).map(|(index, _)| index).collect::<HashSet<usize>>()
     };
 
     let content = game.hand(position).iter().enumerate().map(|(index, card)| {
@@ -90,7 +88,11 @@ pub fn hand_row(link: &ComponentLink<Oak>, game: &Game, position: Position, hidd
 pub fn opponent_hand_column(cards: &[Card], hidden: bool) -> Html {
     html! {
         <div class="game__opponent-hand-column">
-        {for cards.iter().map(|card| card_in_hand(*card, hidden, CardOrientation::Horizontal, None))}
+        {
+            for cards
+                .iter()
+                .map(|card| card_in_hand(*card, hidden, CardOrientation::Horizontal, None))
+        }
         </div>
     }
 }
@@ -103,11 +105,7 @@ pub fn card_in_hand(
     orientation: CardOrientation,
     on_click: OnClick,
 ) -> Html {
-    let content = if hidden {
-        hidden_card(orientation)
-    } else {
-        visible_card(card, on_click)
-    };
+    let content = if hidden { hidden_card(orientation) } else { visible_card(card, on_click) };
 
     html! {
         <div class="game__card-in-hand">
@@ -199,9 +197,7 @@ pub fn render_game(link: &ComponentLink<Oak>, game: &Game) -> Html {
         GamePhase::Bidding => (bid::render_bidding(link, game), None),
         GamePhase::Playing => (
             current_trick(&game.trick),
-            game.trick
-                .is_completed()
-                .then(|| link.callback(|_| Action::Continue)),
+            game.trick.is_completed().then(|| link.callback(|_| Action::Continue)),
         ),
     };
 

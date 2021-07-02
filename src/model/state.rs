@@ -14,9 +14,8 @@
 
 //! Represents the top-level game state
 
-use crate::agents::agent;
-
 use super::game::Game;
+use crate::agents::agent;
 
 #[derive(Debug)]
 pub struct State {

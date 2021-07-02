@@ -36,10 +36,7 @@ pub fn play_card(game: &mut Game, id: CardId) {
 /// * If the current trick is in-progress, returns the next player in turn order
 /// * If the current trick is full, returns the winner of that trick
 pub fn next_to_play(game: &Game) -> Option<Position> {
-    let next = game
-        .trick
-        .turn_order()
-        .find(|p| game.trick.card_played(*p).is_none());
+    let next = game.trick.turn_order().find(|p| game.trick.card_played(*p).is_none());
     match next {
         _ if Position::iter().all(|p| game.hand(p).is_empty()) => None,
         None => trick_winner(game).map(|(p, _)| p),
@@ -47,8 +44,8 @@ pub fn next_to_play(game: &Game) -> Option<Position> {
     }
 }
 
-/// Returns all ([CardId], [Card]) pairs that the provided [Position] can currently
-/// legally play, in hand order.
+/// Returns all ([CardId], [Card]) pairs that the provided [Position] can
+/// currently legally play, in hand order.
 /// * If it is not currently the turn of this position, returns an empty
 ///   iterator
 /// * If it this position's turn to lead *or* if this position cannot follow
@@ -60,10 +57,8 @@ pub fn legal_plays(game: &Game, position: Position) -> impl Iterator<Item = (usi
         None
     } else {
         game.trick.lead_suit().and_then(|lead| {
-            game.hand(position)
-                .iter()
-                .map(|c| c.suit)
-                .find(|s| *s == lead) // Do we have any cards of the lead suit?
+            // Do we have any cards of the lead suit?
+            game.hand(position).iter().map(|c| c.suit).find(|s| *s == lead)
         })
     };
 
@@ -100,9 +95,7 @@ pub fn compare_card_power(game: &Game, a: Card, b: Card) -> Ordering {
 /// played the highest card (as defined by the [compare_card_power] function)
 /// to the current trick, or the None if no cards have been played
 pub fn trick_winner(game: &Game) -> Option<(Position, Card)> {
-    game.trick
-        .cards()
-        .max_by(|(_, a), (_, b)| compare_card_power(game, *a, *b))
+    game.trick.cards().max_by(|(_, a), (_, b)| compare_card_power(game, *a, *b))
 }
 
 /// Returns an iterator over all [legal_plays] for this [Position] which are
@@ -152,12 +145,11 @@ pub fn resolve_continue_action(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         game::{self, deck, test_helpers},
         model::primitives::{Card, Position, Rank, Suit},
     };
-
-    use super::*;
 
     #[test]
     fn test_play_card() {
@@ -165,17 +157,8 @@ mod tests {
         assert_eq!(g.hand(Position::User)[0], test_helpers::USER_CARD_0);
         assert_eq!(g.hand(Position::User).len(), 13);
         assert_eq!(g.trick.card_played(Position::User), None);
-        play_card(
-            &mut g,
-            CardId {
-                position: Position::User,
-                index: 0,
-            },
-        );
-        assert_eq!(
-            g.trick.card_played(Position::User),
-            Some(test_helpers::USER_CARD_0)
-        );
+        play_card(&mut g, CardId { position: Position::User, index: 0 });
+        assert_eq!(g.trick.card_played(Position::User), Some(test_helpers::USER_CARD_0));
         assert_eq!(g.hand(Position::User).len(), 12);
     }
 
@@ -184,33 +167,21 @@ mod tests {
         let mut g = test_helpers::create_test_game();
         g.trick = Trick::new(Position::Dummy);
         assert_eq!(next_to_play(&g), Some(Position::Dummy));
-        g.trick
-            .set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
+        g.trick.set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
         assert_eq!(next_to_play(&g), Some(Position::Right));
-        g.trick
-            .set_card_played(Position::Right, Card::new(Suit::Clubs, Rank::Three));
-        g.trick
-            .set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Ace));
+        g.trick.set_card_played(Position::Right, Card::new(Suit::Clubs, Rank::Three));
+        g.trick.set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Ace));
         assert_eq!(next_to_play(&g), Some(Position::Left));
-        g.trick
-            .set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
+        g.trick.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
         assert_eq!(next_to_play(&g), Some(Position::User));
 
         let mut game_over = test_helpers::create_empty_game();
         assert_eq!(next_to_play(&game_over), None);
 
-        game_over
-            .right_opponet_hand
-            .push(Card::new(Suit::Clubs, Rank::Three));
-        game_over
-            .trick
-            .set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
-        game_over
-            .trick
-            .set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Ace));
-        game_over
-            .trick
-            .set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
+        game_over.right_opponet_hand.push(Card::new(Suit::Clubs, Rank::Three));
+        game_over.trick.set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
+        game_over.trick.set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Ace));
+        game_over.trick.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
         assert_eq!(next_to_play(&game_over), Some(Position::Right));
     }
 
@@ -226,8 +197,7 @@ mod tests {
 
         let c4 = Card::new(Suit::Clubs, Rank::Four);
         let d7 = Card::new(Suit::Diamonds, Rank::Seven);
-        g.trick
-            .set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Two));
+        g.trick.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Two));
         g.dummy_hand = vec![c4, d7];
 
         assert_eq!(legal_plays(&g, Position::Left).count(), 0);
@@ -242,8 +212,7 @@ mod tests {
 
         // After the 4th card is played, the winner (right) can play any card
         assert_eq!(legal_plays(&g, Position::Right).count(), 0);
-        g.trick
-            .set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Three));
+        g.trick.set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Three));
         assert_eq!(legal_plays(&g, Position::Right).count(), 13);
         assert_eq!(legal_plays(&g, Position::Left).count(), 0);
         assert_eq!(legal_plays(&g, Position::User).count(), 0);
@@ -266,10 +235,8 @@ mod tests {
         assert!(legal_plays(&g, Position::User).eq(vec![(0, c3)]));
         assert_eq!(legal_plays(&g, Position::Dummy).count(), 0);
 
-        g.trick
-            .set_card_played(Position::User, g.user_hand.pop().unwrap());
-        g.trick
-            .set_card_played(Position::Left, g.left_opponent_hand.pop().unwrap());
+        g.trick.set_card_played(Position::User, g.user_hand.pop().unwrap());
+        g.trick.set_card_played(Position::Left, g.left_opponent_hand.pop().unwrap());
 
         assert_eq!(legal_plays(&g, Position::User).count(), 0);
         assert!(legal_plays(&g, Position::Dummy).eq(vec![(0, d10)]));
@@ -401,18 +368,10 @@ mod tests {
     #[test]
     fn test_resolve_continue_action() {
         let mut s = test_helpers::create_test_state();
-        s.game
-            .trick
-            .set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
-        s.game
-            .trick
-            .set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
-        s.game
-            .trick
-            .set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
-        s.game
-            .trick
-            .set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
+        s.game.trick.set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
+        s.game.trick.set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
+        s.game.trick.set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
+        s.game.trick.set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
 
         resolve_continue_action(&mut s);
         assert_eq!(
