@@ -14,7 +14,7 @@
 
 //! Responsible for dealing cards & creating new Game instances
 
-use std::collections::HashMap;
+use std::{collections::HashMap, slice::ChunksExact};
 
 use rand::{prelude::SliceRandom, Rng, SeedableRng};
 use rand_pcg::Pcg64;
@@ -37,14 +37,20 @@ pub fn new_game(rng: &mut impl Rng) -> Game {
     cards.shuffle(rng);
     let mut chunks = cards.chunks_exact(13);
 
+    fn build_hand(chunks: &mut ChunksExact<Card>) -> Vec<Card> {
+        let mut hand = chunks.next().expect("Invalid deck size").to_vec();
+        hand.sort_unstable();
+        hand
+    }
+
     Game {
         phase: GamePhase::Bidding,
         trick: Trick::new(Position::User),
         trump: None,
-        user_hand: chunks.next().expect("Invalid deck size").to_vec(),
-        left_opponent_hand: chunks.next().expect("Invalid deck size").to_vec(),
-        dummy_hand: chunks.next().expect("Invalid deck size").to_vec(),
-        right_opponet_hand: chunks.next().expect("Invalid deck size").to_vec(),
+        user_hand: build_hand(&mut chunks),
+        left_opponent_hand: build_hand(&mut chunks),
+        dummy_hand: build_hand(&mut chunks),
+        right_opponet_hand: build_hand(&mut chunks),
     }
 }
 

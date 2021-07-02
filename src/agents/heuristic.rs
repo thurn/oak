@@ -59,7 +59,12 @@ fn find_winning_card(game: &Game, position: Position) -> Option<usize> {
 /// Discards the lowest-ranking card, either following suit or throwing off
 fn find_discard(game: &Game, position: Position) -> usize {
     play_phase::legal_plays(game, position)
-        .min_by(|(_, a), (_, b)| play_phase::compare_card_power(game, *a, *b))
+        .min_by(
+            |(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
+                Ordering::Equal => a.rank.cmp(&b.rank),
+                ordering => ordering,
+            },
+        )
         .map(|(index, _)| index)
         .expect("No legal plays")
 }
@@ -79,19 +84,20 @@ mod tests {
     fn test_select_play() {
         let agent = HeuristicAgent {};
         let mut g = test_helpers::create_test_game();
+
         let p1 = agent.select_play(&g, Position::User);
-        assert_eq!(g.user_hand[p1], Card::new(Suit::Clubs, Rank::Ace));
+        assert_eq!(g.user_hand[p1], Card::new(Suit::Hearts, Rank::Ace));
         play_phase::play_card(&mut g, CardId::new(Position::User, p1));
         let p2 = agent.select_play(&g, Position::Left);
-        assert_eq!(g.left_opponent_hand[p2], Card::new(Suit::Clubs, Rank::Four));
+        assert_eq!(
+            g.left_opponent_hand[p2],
+            Card::new(Suit::Hearts, Rank::Five)
+        );
         play_phase::play_card(&mut g, CardId::new(Position::Left, p2));
         let p3 = agent.select_play(&g, Position::Dummy);
-        assert_eq!(g.dummy_hand[p3], Card::new(Suit::Clubs, Rank::Five));
+        assert_eq!(g.dummy_hand[p3], Card::new(Suit::Hearts, Rank::Four));
         play_phase::play_card(&mut g, CardId::new(Position::Dummy, p3));
         let p4 = agent.select_play(&g, Position::Right);
-        assert_eq!(
-            g.right_opponet_hand[p4],
-            Card::new(Suit::Clubs, Rank::Three)
-        );
+        assert_eq!(g.right_opponet_hand[p4], Card::new(Suit::Hearts, Rank::Two));
     }
 }

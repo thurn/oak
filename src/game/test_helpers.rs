@@ -34,20 +34,29 @@ use crate::{
 /// - Phase: Bidding
 /// - Lead: User
 /// - Hands:
-///   - User:  10♣ 8♠ 6♥ A♥ 9♣ 7♠ 10♥ 2♠ 9♥ 6♣ K♠ A♣ 2♣
-///   - Left:  10♦ 9♦ 4♣ 3♦ 6♠ 2♦ Q♦ 8♣ K♥ 5♥ 8♥ A♠ 3♠
-///   - Dummy: 4♥ 10♠ K♦ 8♦ 5♣ Q♥ 7♦ 7♥ J♥ 6♦ K♣ 4♠ 5♠
-///   - Right: 3♣ 2♥ 5♦ J♦ 7♣ A♦ 4♦ J♣ 3♥ Q♣ Q♠ 9♠ J♠
+///   - User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
+///   - Left:  ♦2 ♦3 ♦9 ♦10 ♦Q ♣4 ♣8 ♥5  ♥8 ♥K ♠3 ♠6 ♠A
+///   - Dummy: ♦6 ♦7 ♦8 ♦K  ♣5 ♣K ♥4 ♥7  ♥J ♥Q ♠4 ♠5 ♠10
+///   - Right: ♦4 ♦5 ♦J ♦A  ♣3 ♣7 ♣J ♣Q  ♥2 ♥3 ♠9 ♠J ♠Q
 pub fn create_test_game() -> Game {
     deck::new_game(&mut Pcg64::seed_from_u64(17))
 }
 
 pub const USER_CARD_0: Card = Card {
     suit: Suit::Clubs,
-    rank: Rank::Ten,
+    rank: Rank::Two,
 };
 
-/// Creates a [State] using [create_test_game] and [ConstantAgent]
+/// Creates a [State] using [create_test_game] and [ConstantAgent], using the same
+/// configuration:
+/// - Trump: None
+/// - Phase: Bidding
+/// - Lead: User
+/// - Hands:
+///   - User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
+///   - Left:  ♦2 ♦3 ♦9 ♦10 ♦Q ♣4 ♣8 ♥5  ♥8 ♥K ♠3 ♠6 ♠A
+///   - Dummy: ♦6 ♦7 ♦8 ♦K  ♣5 ♣K ♥4 ♥7  ♥J ♥Q ♠4 ♠5 ♠10
+///   - Right: ♦4 ♦5 ♦J ♦A  ♣3 ♣7 ♣J ♣Q  ♥2 ♥3 ♠9 ♠J ♠Q
 pub fn create_test_state() -> State {
     State {
         game: create_test_game(),

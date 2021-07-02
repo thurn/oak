@@ -368,7 +368,7 @@ mod tests {
         resolve_card_play_action(&mut s, CardId::new(Position::User, 0));
         assert_eq!(
             s.game.trick.card_played(Position::User).unwrap(),
-            Card::new(Suit::Clubs, Rank::Ten)
+            Card::new(Suit::Clubs, Rank::Two)
         );
         assert_eq!(
             s.game.trick.card_played(Position::Left).unwrap(),
@@ -385,14 +385,14 @@ mod tests {
             Card::new(Suit::Clubs, Rank::Three)
         );
 
-        resolve_card_play_action(&mut s, CardId::new(Position::User, 0));
+        resolve_card_play_action(&mut s, CardId::new(Position::User, 11));
         assert_eq!(
             s.game.trick.card_played(Position::User).unwrap(),
-            Card::new(Suit::Spades, Rank::Eight)
+            Card::new(Suit::Spades, Rank::King)
         );
         assert_eq!(
             s.game.trick.card_played(Position::Left).unwrap(),
-            Card::new(Suit::Spades, Rank::Six)
+            Card::new(Suit::Spades, Rank::Three)
         );
         assert!(s.game.trick.card_played(Position::Dummy).is_none());
         assert!(s.game.trick.card_played(Position::Right).is_none());
@@ -403,21 +403,21 @@ mod tests {
         let mut s = test_helpers::create_test_state();
         s.game
             .trick
-            .set_card_played(Position::User, Card::new(Suit::Diamonds, Rank::Two));
+            .set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
         s.game
             .trick
-            .set_card_played(Position::Left, Card::new(Suit::Diamonds, Rank::Three));
+            .set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
         s.game
             .trick
-            .set_card_played(Position::Dummy, Card::new(Suit::Diamonds, Rank::Four));
+            .set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
         s.game
             .trick
-            .set_card_played(Position::Right, Card::new(Suit::Diamonds, Rank::Five));
+            .set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
 
         resolve_continue_action(&mut s);
         assert_eq!(
             s.game.trick.card_played(Position::Right).unwrap(),
-            Card::new(Suit::Clubs, Rank::Three)
+            Card::new(Suit::Diamonds, Rank::Four)
         );
         assert!(s.game.trick.card_played(Position::Dummy).is_none());
         assert!(s.game.trick.card_played(Position::User).is_none());
