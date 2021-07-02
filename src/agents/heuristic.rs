@@ -17,11 +17,11 @@
 
 use std::cmp::Ordering;
 
-use super::agent::Agent;
 use crate::{
+    agents::agent::Agent,
     game::play_phase,
     model::{
-        game::Game,
+        game::PlayPhaseData,
         primitives::{CardId, Position},
     },
 };
@@ -32,22 +32,22 @@ pub struct HeuristicAgent;
 impl Agent for HeuristicAgent {
     /// Wins the trick if possible & partner is not already winning, otherwise
     /// discards
-    fn select_play(&self, game: &Game, position: Position) -> usize {
+    fn select_play(&self, data: &PlayPhaseData, position: Position) -> usize {
         let winner =
-            if play_phase::trick_winner(game).map_or(true, |(w, _)| w != position.partner()) {
-                find_winning_card(game, position)
+            if play_phase::trick_winner(data).map_or(true, |(w, _)| w != position.partner()) {
+                find_winning_card(data, position)
             } else {
                 None
             };
 
-        winner.unwrap_or_else(|| find_discard(game, position))
+        winner.unwrap_or_else(|| find_discard(data, position))
     }
 }
 
 /// Returns the position of the highest power card in hand which can win the
 /// current trick, if any, returning higher rank cards later in hand in the
 /// event of a tie
-fn find_winning_card(game: &Game, position: Position) -> Option<usize> {
+fn find_winning_card(game: &PlayPhaseData, position: Position) -> Option<usize> {
     play_phase::winning_plays(game, position)
         .max_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
             Ordering::Equal => a.rank.cmp(&b.rank),
@@ -57,7 +57,7 @@ fn find_winning_card(game: &Game, position: Position) -> Option<usize> {
 }
 
 /// Discards the lowest-ranking card, either following suit or throwing off
-fn find_discard(game: &Game, position: Position) -> usize {
+fn find_discard(game: &PlayPhaseData, position: Position) -> usize {
     play_phase::legal_plays(game, position)
         .min_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
             Ordering::Equal => a.rank.cmp(&b.rank),
@@ -83,15 +83,15 @@ mod tests {
         let mut g = test_helpers::create_test_game();
 
         let p1 = agent.select_play(&g, Position::User);
-        assert_eq!(g.user_hand[p1], Card::new(Suit::Hearts, Rank::Ace));
+        assert_eq!(g.game.hands.user_hand[p1], Card::new(Suit::Hearts, Rank::Ace));
         play_phase::play_card(&mut g, CardId::new(Position::User, p1));
         let p2 = agent.select_play(&g, Position::Left);
-        assert_eq!(g.left_opponent_hand[p2], Card::new(Suit::Hearts, Rank::Five));
+        assert_eq!(g.game.hands.left_opponent_hand[p2], Card::new(Suit::Hearts, Rank::Five));
         play_phase::play_card(&mut g, CardId::new(Position::Left, p2));
         let p3 = agent.select_play(&g, Position::Dummy);
-        assert_eq!(g.dummy_hand[p3], Card::new(Suit::Hearts, Rank::Four));
+        assert_eq!(g.game.hands.dummy_hand[p3], Card::new(Suit::Hearts, Rank::Four));
         play_phase::play_card(&mut g, CardId::new(Position::Dummy, p3));
         let p4 = agent.select_play(&g, Position::Right);
-        assert_eq!(g.right_opponet_hand[p4], Card::new(Suit::Hearts, Rank::Two));
+        assert_eq!(g.game.hands.right_opponet_hand[p4], Card::new(Suit::Hearts, Rank::Two));
     }
 }

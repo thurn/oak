@@ -18,7 +18,7 @@ use std::iter;
 
 use strum::IntoEnumIterator;
 
-use crate::model::primitives::{Card, GamePhase, Position, Suit};
+use crate::model::primitives::{Card, Position, Suit};
 
 /// The current trick being played
 #[derive(Debug, PartialEq, Eq)]
@@ -81,33 +81,75 @@ impl Trick {
 }
 
 /// Represents a single game in a run
+// #[derive(Debug)]
+// pub struct Game {
+//     pub phase: GamePhase,
+//     pub trick: Trick,
+//     pub trump: Option<Suit>,
+//     pub user_hand: Vec<Card>,
+//     pub dummy_hand: Vec<Card>,
+//     pub left_opponent_hand: Vec<Card>,
+//     pub right_opponet_hand: Vec<Card>,
+// }
+
 #[derive(Debug)]
-pub struct Game {
-    pub phase: GamePhase,
-    pub trick: Trick,
-    pub trump: Option<Suit>,
+pub struct Hands {
     pub user_hand: Vec<Card>,
     pub dummy_hand: Vec<Card>,
     pub left_opponent_hand: Vec<Card>,
     pub right_opponet_hand: Vec<Card>,
 }
 
-impl Game {
+#[derive(Debug)]
+pub struct GameData {
+    pub hands: Hands,
+}
+
+impl GameData {
     pub fn hand(&self, position: Position) -> &Vec<Card> {
         match position {
-            Position::User => &self.user_hand,
-            Position::Dummy => &self.dummy_hand,
-            Position::Left => &self.left_opponent_hand,
-            Position::Right => &self.right_opponet_hand,
+            Position::User => &self.hands.user_hand,
+            Position::Dummy => &self.hands.dummy_hand,
+            Position::Left => &self.hands.left_opponent_hand,
+            Position::Right => &self.hands.right_opponet_hand,
         }
     }
 
     pub fn hand_mut(&mut self, position: Position) -> &mut Vec<Card> {
         match position {
-            Position::User => &mut self.user_hand,
-            Position::Dummy => &mut self.dummy_hand,
-            Position::Left => &mut self.left_opponent_hand,
-            Position::Right => &mut self.right_opponet_hand,
+            Position::User => &mut self.hands.user_hand,
+            Position::Dummy => &mut self.hands.dummy_hand,
+            Position::Left => &mut self.hands.left_opponent_hand,
+            Position::Right => &mut self.hands.right_opponet_hand,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Contract {
+    pub trump: Option<Suit>,
+    pub tricks: usize,
+    pub declarer: Position,
+}
+
+#[derive(Debug)]
+pub struct PlayPhaseData {
+    pub game: GameData,
+    pub trick: Trick,
+    pub contract: Contract,
+}
+
+#[derive(Debug)]
+pub enum GamePhase {
+    Auction(GameData),
+    Playing(PlayPhaseData),
+}
+
+impl GamePhase {
+    pub fn game(&self) -> &GameData {
+        match self {
+            GamePhase::Auction(game) => game,
+            GamePhase::Playing(data) => &data.game,
         }
     }
 }

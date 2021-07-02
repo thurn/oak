@@ -14,11 +14,10 @@
 
 //! Represents the top-level game state
 
-use super::game::Game;
-use crate::agents::agent;
+use crate::{agents::agent, model::game::GamePhase};
 
 #[derive(Debug)]
 pub struct State {
-    pub game: Game,
+    pub phase: GamePhase,
     pub agent: Box<dyn agent::Agent>,
 }

@@ -148,13 +148,6 @@ impl Position {
     }
 }
 
-/// Identifies the current overall state of the game
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
-pub enum GamePhase {
-    Bidding,
-    Playing,
-}
-
 /// Identifier for a [Card] in a given hand
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub struct CardId {

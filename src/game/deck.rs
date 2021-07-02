@@ -21,13 +21,12 @@ use rand_pcg::Pcg64;
 use strum::IntoEnumIterator;
 
 use crate::model::{
-    game::{Game, Trick},
-    primitives::{Card, GamePhase, Position, Rank, Suit},
+    game::{GameData, Hands, Trick},
+    primitives::{Card, Position, Rank, Suit},
 };
 
-/// Creates a new [Game] in the [GamePhase::Bidding] state, dealing hands to the
-/// four positions
-pub fn new_game(rng: &mut impl Rng) -> Game {
+/// Creates a new [GameData] dealing hands to the four positions
+pub fn new_game(rng: &mut impl Rng) -> GameData {
     let mut cards = Vec::new();
     for suit in Suit::iter() {
         for rank in Rank::iter() {
@@ -43,14 +42,13 @@ pub fn new_game(rng: &mut impl Rng) -> Game {
         hand
     }
 
-    Game {
-        phase: GamePhase::Bidding,
-        trick: Trick::new(Position::User),
-        trump: None,
-        user_hand: build_hand(&mut chunks),
-        left_opponent_hand: build_hand(&mut chunks),
-        dummy_hand: build_hand(&mut chunks),
-        right_opponet_hand: build_hand(&mut chunks),
+    GameData {
+        hands: Hands {
+            user_hand: build_hand(&mut chunks),
+            left_opponent_hand: build_hand(&mut chunks),
+            dummy_hand: build_hand(&mut chunks),
+            right_opponet_hand: build_hand(&mut chunks),
+        },
     }
 }
 
@@ -62,12 +60,10 @@ mod tests {
     #[test]
     fn test_new_game() {
         let g = new_game(&mut Pcg64::seed_from_u64(17));
-        assert_eq!(g.phase, GamePhase::Bidding);
-        assert_eq!(g.trick, Trick::new(Position::User));
-        assert_eq!(g.user_hand.len(), 13);
-        assert_eq!(g.left_opponent_hand.len(), 13);
-        assert_eq!(g.dummy_hand.len(), 13);
-        assert_eq!(g.right_opponet_hand.len(), 13);
-        assert_eq!(g.user_hand[0], test_helpers::USER_CARD_0)
+        assert_eq!(g.hands.user_hand.len(), 13);
+        assert_eq!(g.hands.left_opponent_hand.len(), 13);
+        assert_eq!(g.hands.dummy_hand.len(), 13);
+        assert_eq!(g.hands.right_opponet_hand.len(), 13);
+        assert_eq!(g.hands.user_hand[0], test_helpers::USER_CARD_0)
     }
 }

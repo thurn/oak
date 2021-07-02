@@ -18,16 +18,19 @@ use std::{cmp::Ordering, iter};
 
 use strum::IntoEnumIterator;
 
-use crate::model::{
-    game::{Game, Trick},
-    primitives::{Card, CardId, Position},
-    state::State,
+use crate::{
+    agents::agent,
+    model::{
+        game::{PlayPhaseData, Trick},
+        primitives::{Card, CardId, Position},
+        state::State,
+    },
 };
 
 /// Moves a card from a given hand into the current trick
-pub fn play_card(game: &mut Game, id: CardId) {
-    let card = game.hand_mut(id.position).remove(id.index);
-    game.trick.set_card_played(id.position, card);
+pub fn play_card(data: &mut PlayPhaseData, id: CardId) {
+    let card = data.game.hand_mut(id.position).remove(id.index);
+    data.trick.set_card_played(id.position, card);
 }
 
 /// Returns the next player to act in the play phase
@@ -35,11 +38,11 @@ pub fn play_card(game: &mut Game, id: CardId) {
 /// * If the current trick is empty, returns the lead player
 /// * If the current trick is in-progress, returns the next player in turn order
 /// * If the current trick is full, returns the winner of that trick
-pub fn next_to_play(game: &Game) -> Option<Position> {
-    let next = game.trick.turn_order().find(|p| game.trick.card_played(*p).is_none());
+pub fn next_to_play(data: &PlayPhaseData) -> Option<Position> {
+    let next = data.trick.turn_order().find(|p| data.trick.card_played(*p).is_none());
     match next {
-        _ if Position::iter().all(|p| game.hand(p).is_empty()) => None,
-        None => trick_winner(game).map(|(p, _)| p),
+        _ if Position::iter().all(|p| data.game.hand(p).is_empty()) => None,
+        None => trick_winner(data).map(|(p, _)| p),
         Some(n) => Some(n),
     }
 }
@@ -52,20 +55,24 @@ pub fn next_to_play(game: &Game) -> Option<Position> {
 ///   suit, returns an iterator over all cards in hand
 /// * Otherwise, returns an iterator over all cards which follow suit in the
 ///   current trick
-pub fn legal_plays(game: &Game, position: Position) -> impl Iterator<Item = (usize, Card)> + '_ {
-    let lead_suit = if game.trick.is_completed() {
+pub fn legal_plays(
+    data: &PlayPhaseData,
+    position: Position,
+) -> impl Iterator<Item = (usize, Card)> + '_ {
+    let lead_suit = if data.trick.is_completed() {
         None
     } else {
-        game.trick.lead_suit().and_then(|lead| {
+        data.trick.lead_suit().and_then(|lead| {
             // Do we have any cards of the lead suit?
-            game.hand(position).iter().map(|c| c.suit).find(|s| *s == lead)
+            data.game.hand(position).iter().map(|c| c.suit).find(|s| *s == lead)
         })
     };
 
-    game.hand(position)
+    data.game
+        .hand(position)
         .iter()
         .enumerate()
-        .filter(move |(_, card)| match (next_to_play(game), lead_suit) {
+        .filter(move |(_, card)| match (next_to_play(data), lead_suit) {
             (Some(turn), _) if turn != position => false, // Not our turn
             (None, _) => false,                           // Game is over
             (_, Some(lead)) => card.suit == lead,         // Follow lead suit
@@ -79,8 +86,8 @@ pub fn legal_plays(game: &Game, position: Position) -> impl Iterator<Item = (usi
 /// If cards have equal power, e.g. because they are both off-suit or because
 /// no cards have been yet played to the trick, returns [Ordering::Equal] even
 /// if the cards themselves are distinct
-pub fn compare_card_power(game: &Game, a: Card, b: Card) -> Ordering {
-    match (game.trump, game.trick.lead_suit()) {
+pub fn compare_card_power(data: &PlayPhaseData, a: Card, b: Card) -> Ordering {
+    match (data.contract.trump, data.trick.lead_suit()) {
         (Some(trump), _) if a.suit == trump && b.suit == trump => a.cmp(&b),
         (Some(trump), _) if a.suit == trump => Ordering::Greater,
         (Some(trump), _) if b.suit == trump => Ordering::Less,
@@ -94,18 +101,21 @@ pub fn compare_card_power(game: &Game, a: Card, b: Card) -> Ordering {
 /// Returns a ([Position], [Card]) pair representing the position which has
 /// played the highest card (as defined by the [compare_card_power] function)
 /// to the current trick, or the None if no cards have been played
-pub fn trick_winner(game: &Game) -> Option<(Position, Card)> {
-    game.trick.cards().max_by(|(_, a), (_, b)| compare_card_power(game, *a, *b))
+pub fn trick_winner(data: &PlayPhaseData) -> Option<(Position, Card)> {
+    data.trick.cards().max_by(|(_, a), (_, b)| compare_card_power(data, *a, *b))
 }
 
 /// Returns an iterator over all [legal_plays] for this [Position] which are
 /// higher in power than the current [trick_winner]. If there is currently no
 /// winner, result is identical to [legal_plays].
-pub fn winning_plays(game: &Game, position: Position) -> impl Iterator<Item = (usize, Card)> + '_ {
-    let winner = trick_winner(game);
-    legal_plays(game, position).filter(move |(i, card)| {
+pub fn winning_plays(
+    data: &PlayPhaseData,
+    position: Position,
+) -> impl Iterator<Item = (usize, Card)> + '_ {
+    let winner = trick_winner(data);
+    legal_plays(data, position).filter(move |(i, card)| {
         if let Some((_, w)) = winner {
-            compare_card_power(game, *card, w) == Ordering::Greater
+            compare_card_power(data, *card, w) == Ordering::Greater
         } else {
             true
         }
@@ -116,30 +126,30 @@ pub fn winning_plays(game: &Game, position: Position) -> impl Iterator<Item = (u
 /// by invoking the current Agent for its action (if required) and updating
 /// the score. If the current trick is full before invoking this action, it is
 /// cleared and this card is set as the leader of a new trick.
-pub fn resolve_card_play_action(state: &mut State, id: CardId) {
-    if state.game.trick.is_completed() {
-        state.game.trick = Trick::new(id.position);
+pub fn resolve_card_play_action(data: &mut PlayPhaseData, agent: &dyn agent::Agent, id: CardId) {
+    if data.trick.is_completed() {
+        data.trick = Trick::new(id.position);
     }
 
-    play_card(&mut state.game, id);
+    play_card(data, id);
 
-    if !state.game.trick.is_completed() {
+    if !data.trick.is_completed() {
         let next = id.position.next();
         assert!(next.is_agent());
-        let agent_action = state.agent.select_play(&state.game, next);
-        play_card(&mut state.game, CardId::new(next, agent_action));
+        let agent_action = agent.select_play(data, next);
+        play_card(data, CardId::new(next, agent_action));
     }
 }
 
 /// Clears the current Trick and sets the winner as the leader of a new Trick,
 /// and then invokes the current Agent for its action (if required).
-pub fn resolve_continue_action(state: &mut State) {
-    let (winner, _) = trick_winner(&state.game).expect("No trick winner");
-    state.game.trick = Trick::new(winner);
+pub fn resolve_continue_action(data: &mut PlayPhaseData, agent: &dyn agent::Agent) {
+    let (winner, _) = trick_winner(data).expect("No trick winner");
+    data.trick = Trick::new(winner);
 
     if winner.is_agent() {
-        let agent_action = state.agent.select_play(&state.game, winner);
-        play_card(&mut state.game, CardId::new(winner, agent_action));
+        let agent_action = agent.select_play(data, winner);
+        play_card(data, CardId::new(winner, agent_action));
     }
 }
 
@@ -148,18 +158,21 @@ mod tests {
     use super::*;
     use crate::{
         game::{self, deck, test_helpers},
-        model::primitives::{Card, Position, Rank, Suit},
+        model::{
+            game::GamePhase,
+            primitives::{Card, Position, Rank, Suit},
+        },
     };
 
     #[test]
     fn test_play_card() {
         let mut g = test_helpers::create_test_game();
-        assert_eq!(g.hand(Position::User)[0], test_helpers::USER_CARD_0);
-        assert_eq!(g.hand(Position::User).len(), 13);
+        assert_eq!(g.game.hand(Position::User)[0], test_helpers::USER_CARD_0);
+        assert_eq!(g.game.hand(Position::User).len(), 13);
         assert_eq!(g.trick.card_played(Position::User), None);
         play_card(&mut g, CardId { position: Position::User, index: 0 });
         assert_eq!(g.trick.card_played(Position::User), Some(test_helpers::USER_CARD_0));
-        assert_eq!(g.hand(Position::User).len(), 12);
+        assert_eq!(g.game.hand(Position::User).len(), 12);
     }
 
     #[test]
@@ -178,7 +191,7 @@ mod tests {
         let mut game_over = test_helpers::create_empty_game();
         assert_eq!(next_to_play(&game_over), None);
 
-        game_over.right_opponet_hand.push(Card::new(Suit::Clubs, Rank::Three));
+        game_over.game.hands.right_opponet_hand.push(Card::new(Suit::Clubs, Rank::Three));
         game_over.trick.set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
         game_over.trick.set_card_played(Position::User, Card::new(Suit::Clubs, Rank::Ace));
         game_over.trick.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Five));
@@ -189,7 +202,7 @@ mod tests {
     fn test_legal_plays() {
         let mut g = test_helpers::create_test_game();
         g.trick.lead = Position::Left;
-        let card = g.hand(Position::Left)[0];
+        let card = g.game.hand(Position::Left)[0];
 
         assert_eq!(legal_plays(&g, Position::Dummy).count(), 0);
         assert_eq!(legal_plays(&g, Position::Left).count(), 13);
@@ -198,12 +211,12 @@ mod tests {
         let c4 = Card::new(Suit::Clubs, Rank::Four);
         let d7 = Card::new(Suit::Diamonds, Rank::Seven);
         g.trick.set_card_played(Position::Left, Card::new(Suit::Clubs, Rank::Two));
-        g.dummy_hand = vec![c4, d7];
+        g.game.hands.dummy_hand = vec![c4, d7];
 
         assert_eq!(legal_plays(&g, Position::Left).count(), 0);
         assert!(legal_plays(&g, Position::Dummy).eq(vec![(0, c4)]));
 
-        g.dummy_hand = vec![d7];
+        g.game.hands.dummy_hand = vec![d7];
 
         assert!(legal_plays(&g, Position::Dummy).eq(vec![(0, d7)]));
 
@@ -227,16 +240,16 @@ mod tests {
         let c4 = Card::new(Suit::Clubs, Rank::Four);
         let d10 = Card::new(Suit::Diamonds, Rank::Ten);
         let c6 = Card::new(Suit::Clubs, Rank::Six);
-        g.user_hand.push(c3);
-        g.left_opponent_hand.push(c4);
-        g.dummy_hand.push(d10);
-        g.right_opponet_hand.push(c6);
+        g.game.hands.user_hand.push(c3);
+        g.game.hands.left_opponent_hand.push(c4);
+        g.game.hands.dummy_hand.push(d10);
+        g.game.hands.right_opponet_hand.push(c6);
 
         assert!(legal_plays(&g, Position::User).eq(vec![(0, c3)]));
         assert_eq!(legal_plays(&g, Position::Dummy).count(), 0);
 
-        g.trick.set_card_played(Position::User, g.user_hand.pop().unwrap());
-        g.trick.set_card_played(Position::Left, g.left_opponent_hand.pop().unwrap());
+        g.trick.set_card_played(Position::User, g.game.hands.user_hand.pop().unwrap());
+        g.trick.set_card_played(Position::Left, g.game.hands.left_opponent_hand.pop().unwrap());
 
         assert_eq!(legal_plays(&g, Position::User).count(), 0);
         assert!(legal_plays(&g, Position::Dummy).eq(vec![(0, d10)]));
@@ -271,7 +284,7 @@ mod tests {
         assert_eq!(compare_card_power(&g, h10, s9), Ordering::Equal);
         assert_eq!(compare_card_power(&g, s2, s9), Ordering::Equal);
 
-        g.trump = Some(Suit::Spades);
+        g.contract.trump = Some(Suit::Spades);
         assert_eq!(compare_card_power(&g, s9, d3), Ordering::Greater);
         assert_eq!(compare_card_power(&g, d3, s9), Ordering::Less);
         assert_eq!(compare_card_power(&g, s2, d3), Ordering::Greater);
@@ -299,7 +312,7 @@ mod tests {
         let da = Card::new(Suit::Diamonds, Rank::Ace);
         g.trick.set_card_played(Position::Right, da);
         assert_eq!(trick_winner(&g), Some((Position::Dummy, c5)));
-        g.trump = Some(Suit::Hearts);
+        g.contract.trump = Some(Suit::Hearts);
         let h2 = Card::new(Suit::Hearts, Rank::Two);
         g.trick.set_card_played(Position::User, h2);
         assert_eq!(trick_winner(&g), Some((Position::User, h2)));
@@ -309,7 +322,7 @@ mod tests {
     fn test_winning_plays() {
         let mut g = test_helpers::create_test_game();
         g.trick.lead = Position::Left;
-        let card = g.hand(Position::Left)[0];
+        let card = g.game.hand(Position::Left)[0];
 
         assert_eq!(winning_plays(&g, Position::Dummy).count(), 0);
         assert_eq!(winning_plays(&g, Position::Left).count(), 13);
@@ -319,66 +332,69 @@ mod tests {
         let c4 = Card::new(Suit::Clubs, Rank::Four);
         let d7 = Card::new(Suit::Diamonds, Rank::Seven);
         g.trick.set_card_played(Position::Left, c2);
-        g.dummy_hand = vec![c4, d7];
+        g.game.hands.dummy_hand = vec![c4, d7];
 
         assert_eq!(winning_plays(&g, Position::Left).count(), 0);
         assert!(winning_plays(&g, Position::Dummy).eq(vec![(0, c4)]));
 
-        g.dummy_hand = vec![d7];
+        g.game.hands.dummy_hand = vec![d7];
 
         assert_eq!(winning_plays(&g, Position::Dummy).count(), 0);
     }
 
     #[test]
     fn test_resolve_card_play_action() {
-        let mut s = test_helpers::create_test_state();
-        resolve_card_play_action(&mut s, CardId::new(Position::User, 0));
+        let (mut data, agent) = test_helpers::create_test_data_and_agent();
+
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 0));
         assert_eq!(
-            s.game.trick.card_played(Position::User).unwrap(),
+            data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Clubs, Rank::Two)
         );
         assert_eq!(
-            s.game.trick.card_played(Position::Left).unwrap(),
+            data.trick.card_played(Position::Left).unwrap(),
             Card::new(Suit::Clubs, Rank::Four)
         );
 
-        resolve_card_play_action(&mut s, CardId::new(Position::Dummy, 4));
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::Dummy, 4));
         assert_eq!(
-            s.game.trick.card_played(Position::Dummy).unwrap(),
+            data.trick.card_played(Position::Dummy).unwrap(),
             Card::new(Suit::Clubs, Rank::Five)
         );
         assert_eq!(
-            s.game.trick.card_played(Position::Right).unwrap(),
+            data.trick.card_played(Position::Right).unwrap(),
             Card::new(Suit::Clubs, Rank::Three)
         );
 
-        resolve_card_play_action(&mut s, CardId::new(Position::User, 11));
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 11));
         assert_eq!(
-            s.game.trick.card_played(Position::User).unwrap(),
+            data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Spades, Rank::King)
         );
         assert_eq!(
-            s.game.trick.card_played(Position::Left).unwrap(),
+            data.trick.card_played(Position::Left).unwrap(),
             Card::new(Suit::Spades, Rank::Three)
         );
-        assert!(s.game.trick.card_played(Position::Dummy).is_none());
-        assert!(s.game.trick.card_played(Position::Right).is_none());
+        assert!(data.trick.card_played(Position::Dummy).is_none());
+        assert!(data.trick.card_played(Position::Right).is_none());
     }
 
     #[test]
     fn test_resolve_continue_action() {
-        let mut s = test_helpers::create_test_state();
-        s.game.trick.set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
-        s.game.trick.set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
-        s.game.trick.set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
-        s.game.trick.set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
+        let (mut data, agent) = test_helpers::create_test_data_and_agent();
 
-        resolve_continue_action(&mut s);
+        data.trick.set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
+        data.trick.set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
+        data.trick.set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
+        data.trick.set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
+
+        resolve_continue_action(&mut data, &*agent);
+
         assert_eq!(
-            s.game.trick.card_played(Position::Right).unwrap(),
+            data.trick.card_played(Position::Right).unwrap(),
             Card::new(Suit::Diamonds, Rank::Four)
         );
-        assert!(s.game.trick.card_played(Position::Dummy).is_none());
-        assert!(s.game.trick.card_played(Position::User).is_none());
+        assert!(data.trick.card_played(Position::Dummy).is_none());
+        assert!(data.trick.card_played(Position::User).is_none());
     }
 }

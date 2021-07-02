@@ -20,7 +20,7 @@ use crate::{
     agents::heuristic::HeuristicAgent,
     game::{bidding_phase, deck, play_phase},
     model::{
-        game::Game,
+        game::GamePhase,
         primitives::{Bid, CardId, Position},
         state::State,
     },
@@ -53,7 +53,7 @@ impl Component for Oak {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
             state: State {
-                game: deck::new_game(&mut rand::thread_rng()),
+                phase: GamePhase::Auction(deck::new_game(&mut rand::thread_rng())),
                 agent: Box::from(HeuristicAgent {}),
             },
             link,
@@ -62,8 +62,18 @@ impl Component for Oak {
 
     fn update(&mut self, action: Action) -> ShouldRender {
         match action {
-            Action::Play(card_id) => play_phase::resolve_card_play_action(&mut self.state, card_id),
-            Action::Continue => play_phase::resolve_continue_action(&mut self.state),
+            Action::Play(card_id) => match self.state.phase {
+                GamePhase::Auction(_) => panic!("Cannot play cards during auction phase"),
+                GamePhase::Playing(ref mut data) => {
+                    play_phase::resolve_card_play_action(data, &*self.state.agent, card_id)
+                }
+            },
+            Action::Continue => match self.state.phase {
+                GamePhase::Auction(_) => panic!("Cannot continue during auction phase"),
+                GamePhase::Playing(ref mut data) => {
+                    play_phase::resolve_continue_action(data, &*self.state.agent)
+                }
+            },
             Action::Bid(bid) => bidding_phase::resolve_bid_action(&mut self.state, bid),
         };
         true
@@ -74,6 +84,6 @@ impl Component for Oak {
     }
 
     fn view(&self) -> Html {
-        super::game::render_game(&self.link, &self.state.game)
+        super::game::render_game(&self.link, &self.state.phase)
     }
 }

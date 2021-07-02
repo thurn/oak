@@ -14,17 +14,17 @@
 
 //! The constant agent always selects the first legal play available to it
 
-use super::agent::Agent;
 use crate::{
+    agents::agent::Agent,
     game::play_phase,
-    model::{game::Game, primitives::Position},
+    model::{game::PlayPhaseData, primitives::Position},
 };
 
 #[derive(Debug)]
 pub struct ConstantAgent;
 
 impl Agent for ConstantAgent {
-    fn select_play(&self, game: &Game, position: Position) -> usize {
-        play_phase::legal_plays(game, position).map(|(i, _)| i).next().expect("No legal plays")
+    fn select_play(&self, data: &PlayPhaseData, position: Position) -> usize {
+        play_phase::legal_plays(data, position).map(|(i, _)| i).next().expect("No legal plays")
     }
 }

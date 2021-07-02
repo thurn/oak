@@ -20,10 +20,14 @@
 }
 
 .bid__bidding-controls__bid-button {
-    padding: 1vmin;
+    width: 8vmin;
+    height: 8vmin;
     margin: 1vmin;
     border-radius: 1vmin;
-    font-size: 5vmin;
+    font-size: 4vmin;
+    align-items: center;
+    justify-content: center;
+    font-family: serif;
 }
 
 .bid__bidding-controls__bid-button--black {

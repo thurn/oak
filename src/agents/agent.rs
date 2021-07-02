@@ -17,7 +17,7 @@
 use std::fmt;
 
 use crate::model::{
-    game::Game,
+    game::PlayPhaseData,
     primitives::{CardId, Position},
 };
 
@@ -25,5 +25,5 @@ pub trait Agent: fmt::Debug {
     /// Invoked during the Play phase when it's the agent's turn to play a
     /// card, either to lead a new trick or to follow an existing one. Should
     /// return the index of a card in hand to play.
-    fn select_play(&self, game: &Game, position: Position) -> usize;
+    fn select_play(&self, data: &PlayPhaseData, position: Position) -> usize;
 }

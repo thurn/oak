@@ -16,26 +16,29 @@
 
 use yew::prelude::*;
 
-use super::main::Oak;
-use crate::{interface::bid, model::game::Game};
+use crate::{
+    interface::{bid, main::Oak},
+    model::game::GameData,
+};
 
-pub fn bidding_controls(link: &ComponentLink<Oak>, game: &Game) -> Html {
+pub fn bidding_controls(link: &ComponentLink<Oak>, game: &GameData) -> Html {
     let red = "bid__bidding-controls__bid-button bid__bidding-controls__bid-button--red";
     let black = "bid__bidding-controls__bid-button bid__bidding-controls__bid-button--black";
 
     html! {
         <div class="bid__bidding-controls">
-            <button class=red>{"♦?"}</button>
-            <button class=black>{"♣?"}</button>
-            <button class=red>{"♥?"}</button>
-            <button class=black>{"♠?"}</button>
-            <button class=black>{"(?)"}</button>
+            <button class=red>{"♦"}</button>
+            <button class=black>{"♣"}</button>
+            <button class=red>{"♥"}</button>
+            <button class=black>{"♠"}</button>
+            <button class=black>{"⊛"}</button>
+            <button class=black>{"↷"}</button>
         </div>
     }
 }
 
 /// Renders the central square content for the bidding phase
-pub fn render_bidding(link: &ComponentLink<Oak>, game: &Game) -> Html {
+pub fn render_bidding(link: &ComponentLink<Oak>, game: &GameData) -> Html {
     html! {
         {bidding_controls(link, game)}
     }
