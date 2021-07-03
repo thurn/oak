@@ -161,17 +161,17 @@ impl CardId {
     }
 }
 
-/// Helper for keeping track of the counts of different suits
+/// Helper for keeping track of integers associate with different suits
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
-pub struct SuitCounts {
+pub struct SuitData {
     pub diamonds: usize,
     pub clubs: usize,
     pub hearts: usize,
     pub spades: usize,
 }
 
-impl SuitCounts {
-    pub fn count(&self, suit: Suit) -> usize {
+impl SuitData {
+    pub fn get(&self, suit: Suit) -> usize {
         match suit {
             Suit::Diamonds => self.diamonds,
             Suit::Clubs => self.clubs,
@@ -180,17 +180,25 @@ impl SuitCounts {
         }
     }
 
-    pub fn increment(&mut self, suit: Suit) {
+    pub fn get_mut(&mut self, suit: Suit) -> &mut usize {
         match suit {
-            Suit::Diamonds => self.diamonds += 1,
-            Suit::Clubs => self.clubs += 1,
-            Suit::Hearts => self.hearts += 1,
-            Suit::Spades => self.spades += 1,
+            Suit::Diamonds => &mut self.diamonds,
+            Suit::Clubs => &mut self.clubs,
+            Suit::Hearts => &mut self.hearts,
+            Suit::Spades => &mut self.spades,
         }
+    }
+
+    pub fn increment(&mut self, suit: Suit) {
+        *self.get_mut(suit) = self.get(suit) + 1
+    }
+
+    pub fn sum(&self) -> usize {
+        self.diamonds + self.clubs + self.hearts + self.spades
     }
 }
 
-impl Default for SuitCounts {
+impl Default for SuitData {
     fn default() -> Self {
         Self { diamonds: 0, clubs: 0, hearts: 0, spades: 0 }
     }

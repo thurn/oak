@@ -16,6 +16,7 @@
 
 use strum_macros::EnumIter;
 
+use super::primitives::Rank;
 use crate::model::primitives::{Position, Suit};
 
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
@@ -92,11 +93,14 @@ pub enum BidResponse {
     /// evaluation for this trump suit
     SuitLength(Suit, usize, LengthOperator, Option<HandEvaluation>),
 
-    /// Identifies a long, strong suit and describes hand balance
-    BestSuit(HandBalance, Suit),
+    /// Identifies a long suit and describes hand balance
+    LongestSuit(HandBalance, Suit),
 
-    /// Identifies a danger suit, e.g. one with no royals
-    DangerSuit(Option<Suit>),
+    /// Identifies a weak suit
+    WeakestSuit(Suit),
+
+    /// Gives a count of cards with a given [Rank]
+    RankCount(Rank, usize),
 }
 
 #[derive(Debug)]
