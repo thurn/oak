@@ -14,6 +14,7 @@
 
 //! All oak datatypes used by the game
 
+pub mod bidding;
 pub mod game;
 pub mod primitives;
 pub mod state;

@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_select_play() {
         let agent = HeuristicAgent {};
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
 
         let p1 = agent.select_play(&g, Position::User);
         assert_eq!(g.game.hands.user_hand[p1], Card::new(Suit::Hearts, Rank::Ace));

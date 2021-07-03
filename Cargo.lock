@@ -224,6 +224,7 @@ dependencies = [
 name = "oak"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "getrandom",
  "rand",
  "rand_pcg",

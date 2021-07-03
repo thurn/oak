@@ -161,11 +161,39 @@ impl CardId {
     }
 }
 
+/// Helper for keeping track of the counts of different suits
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
-pub enum Bid {
-    Suit(Suit),
-    Query,
-    Pass,
+pub struct SuitCounts {
+    pub diamonds: usize,
+    pub clubs: usize,
+    pub hearts: usize,
+    pub spades: usize,
+}
+
+impl SuitCounts {
+    pub fn count(&self, suit: Suit) -> usize {
+        match suit {
+            Suit::Diamonds => self.diamonds,
+            Suit::Clubs => self.clubs,
+            Suit::Hearts => self.hearts,
+            Suit::Spades => self.spades,
+        }
+    }
+
+    pub fn increment(&mut self, suit: Suit) {
+        match suit {
+            Suit::Diamonds => self.diamonds += 1,
+            Suit::Clubs => self.clubs += 1,
+            Suit::Hearts => self.hearts += 1,
+            Suit::Spades => self.spades += 1,
+        }
+    }
+}
+
+impl Default for SuitCounts {
+    fn default() -> Self {
+        Self { diamonds: 0, clubs: 0, hearts: 0, spades: 0 }
+    }
 }
 
 #[cfg(test)]

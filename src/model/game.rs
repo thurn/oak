@@ -18,7 +18,10 @@ use std::iter;
 
 use strum::IntoEnumIterator;
 
-use crate::model::primitives::{Card, Position, Suit};
+use crate::model::{
+    bidding::Auction,
+    primitives::{Card, Position, Suit},
+};
 
 /// The current trick being played
 #[derive(Debug, PartialEq, Eq)]
@@ -80,18 +83,6 @@ impl Trick {
     }
 }
 
-/// Represents a single game in a run
-// #[derive(Debug)]
-// pub struct Game {
-//     pub phase: GamePhase,
-//     pub trick: Trick,
-//     pub trump: Option<Suit>,
-//     pub user_hand: Vec<Card>,
-//     pub dummy_hand: Vec<Card>,
-//     pub left_opponent_hand: Vec<Card>,
-//     pub right_opponet_hand: Vec<Card>,
-// }
-
 #[derive(Debug)]
 pub struct Hands {
     pub user_hand: Vec<Card>,
@@ -103,6 +94,7 @@ pub struct Hands {
 #[derive(Debug)]
 pub struct GameData {
     pub hands: Hands,
+    pub auction: Auction,
 }
 
 impl GameData {

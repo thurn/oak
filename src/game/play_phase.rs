@@ -16,10 +16,11 @@
 
 use std::{cmp::Ordering, iter};
 
+use anyhow::Result;
 use strum::IntoEnumIterator;
 
 use crate::{
-    agents::agent,
+    agents::agent::{self, Agent},
     model::{
         game::{PlayPhaseData, Trick},
         primitives::{Card, CardId, Position},
@@ -126,7 +127,11 @@ pub fn winning_plays(
 /// by invoking the current Agent for its action (if required) and updating
 /// the score. If the current trick is full before invoking this action, it is
 /// cleared and this card is set as the leader of a new trick.
-pub fn resolve_card_play_action(data: &mut PlayPhaseData, agent: &dyn agent::Agent, id: CardId) {
+pub fn resolve_card_play_action(
+    data: &mut PlayPhaseData,
+    agent: &dyn Agent,
+    id: CardId,
+) -> Result<()> {
     if data.trick.is_completed() {
         data.trick = Trick::new(id.position);
     }
@@ -139,11 +144,13 @@ pub fn resolve_card_play_action(data: &mut PlayPhaseData, agent: &dyn agent::Age
         let agent_action = agent.select_play(data, next);
         play_card(data, CardId::new(next, agent_action));
     }
+
+    Ok(())
 }
 
 /// Clears the current Trick and sets the winner as the leader of a new Trick,
 /// and then invokes the current Agent for its action (if required).
-pub fn resolve_continue_action(data: &mut PlayPhaseData, agent: &dyn agent::Agent) {
+pub fn resolve_continue_action(data: &mut PlayPhaseData, agent: &dyn Agent) -> Result<()> {
     let (winner, _) = trick_winner(data).expect("No trick winner");
     data.trick = Trick::new(winner);
 
@@ -151,6 +158,8 @@ pub fn resolve_continue_action(data: &mut PlayPhaseData, agent: &dyn agent::Agen
         let agent_action = agent.select_play(data, winner);
         play_card(data, CardId::new(winner, agent_action));
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -166,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_play_card() {
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         assert_eq!(g.game.hand(Position::User)[0], test_helpers::USER_CARD_0);
         assert_eq!(g.game.hand(Position::User).len(), 13);
         assert_eq!(g.trick.card_played(Position::User), None);
@@ -177,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_next_to_play() {
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         g.trick = Trick::new(Position::Dummy);
         assert_eq!(next_to_play(&g), Some(Position::Dummy));
         g.trick.set_card_played(Position::Dummy, Card::new(Suit::Clubs, Rank::Two));
@@ -200,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_legal_plays() {
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         g.trick.lead = Position::Left;
         let card = g.game.hand(Position::Left)[0];
 
@@ -264,7 +273,7 @@ mod tests {
         let s2 = Card::new(Suit::Spades, Rank::Two);
         let h10 = Card::new(Suit::Hearts, Rank::Ten);
 
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         assert_eq!(compare_card_power(&g, d3, d3), Ordering::Equal);
         assert_eq!(compare_card_power(&g, d3, d8), Ordering::Equal);
         assert_eq!(compare_card_power(&g, d3, s9), Ordering::Equal);
@@ -300,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_trick_winner() {
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         g.trick.lead = Position::Left;
         assert_eq!(trick_winner(&g), None);
         let c3 = Card::new(Suit::Clubs, Rank::Three);
@@ -320,7 +329,7 @@ mod tests {
 
     #[test]
     fn test_winning_plays() {
-        let mut g = test_helpers::create_test_game();
+        let mut g = test_helpers::create_test_play_phase();
         g.trick.lead = Position::Left;
         let card = g.game.hand(Position::Left)[0];
 
@@ -346,7 +355,7 @@ mod tests {
     fn test_resolve_card_play_action() {
         let (mut data, agent) = test_helpers::create_test_data_and_agent();
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 0));
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 0)).unwrap();
         assert_eq!(
             data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Clubs, Rank::Two)
@@ -356,7 +365,7 @@ mod tests {
             Card::new(Suit::Clubs, Rank::Four)
         );
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::Dummy, 4));
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::Dummy, 4)).unwrap();
         assert_eq!(
             data.trick.card_played(Position::Dummy).unwrap(),
             Card::new(Suit::Clubs, Rank::Five)
@@ -366,7 +375,7 @@ mod tests {
             Card::new(Suit::Clubs, Rank::Three)
         );
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 11));
+        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 11)).unwrap();
         assert_eq!(
             data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Spades, Rank::King)
@@ -388,7 +397,7 @@ mod tests {
         data.trick.set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
         data.trick.set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
 
-        resolve_continue_action(&mut data, &*agent);
+        resolve_continue_action(&mut data, &*agent).unwrap();
 
         assert_eq!(
             data.trick.card_played(Position::Right).unwrap(),

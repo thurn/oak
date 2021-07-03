@@ -1,0 +1,149 @@
+// Copyright © 2021-present Derek Thurn
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//    https://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Types related to bidding
+
+use strum_macros::EnumIter;
+
+use crate::model::primitives::{Position, Suit};
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+pub enum Bid {
+    Query,
+    Suit(Suit),
+    Pass,
+}
+
+/// An evaluation of the strength of a hand
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+pub enum HandEvaluation {
+    Terrible,
+    Poor,
+    Fair,
+    Good,
+    Excellent,
+    Superb,
+}
+
+impl HandEvaluation {
+    pub fn new(score: usize) -> Self {
+        match score {
+            0..=5 => Self::Terrible,
+            6..=9 => Self::Poor,
+            10..=12 => Self::Fair,
+            13..=15 => Self::Good,
+            16..=18 => Self::Excellent,
+            _ => Self::Superb,
+        }
+    }
+}
+
+/// Description of the distribution of a hand. Traditionally a 'balanced hand'
+/// is one containing at most one doubleton and no singletons or voids.
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+pub enum HandBalance {
+    Balanced,
+    Unbalanced,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+pub enum LengthOperator {
+    /// Less than or equal to this suit count
+    Lower,
+    /// Greater than or equal to this suit count
+    Higher,
+    /// Exactly equal to this suit count
+    Equal,
+}
+
+impl LengthOperator {
+    /// Compares two values, producing [LengthOperator::Lower] or
+    /// [LengthOperator::Higher] results, or returning 'bias' if the values
+    /// are equal.
+    pub fn compare(have: usize, constraint: usize, bias: Self) -> Self {
+        match have.cmp(&constraint) {
+            std::cmp::Ordering::Less => Self::Lower,
+            std::cmp::Ordering::Equal => bias,
+            std::cmp::Ordering::Greater => Self::Higher,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+pub enum BidResponse {
+    /// No response
+    Pass,
+
+    /// Hand strength evaluation
+    HandEvaluation(HandEvaluation),
+
+    /// Constraint on the length of a suit, optionally including a hand
+    /// evaluation for this trump suit
+    SuitLength(Suit, usize, LengthOperator, Option<HandEvaluation>),
+
+    /// Identifies a long, strong suit and describes hand balance
+    BestSuit(HandBalance, Suit),
+
+    /// Identifies a danger suit, e.g. one with no royals
+    DangerSuit(Option<Suit>),
+}
+
+#[derive(Debug)]
+pub struct AuctionTurn {
+    pub bid: Bid,
+    pub response: BidResponse,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
+pub enum Bidder {
+    First,
+    Second,
+}
+
+#[derive(Debug)]
+pub struct Auction {
+    /// Number of tricks the auction winner must win
+    pub bid_number: usize,
+
+    /// Position which will act first in bidding
+    pub first: Position,
+    pub first_bids: Vec<AuctionTurn>,
+
+    /// Position which will act second in bidding
+    pub second: Position,
+    pub second_bids: Vec<AuctionTurn>,
+}
+
+impl Auction {
+    pub fn position(&self, bidder: Bidder) -> Position {
+        match bidder {
+            Bidder::First => self.first,
+            Bidder::Second => self.second,
+        }
+    }
+
+    pub fn bids(&self, bidder: Bidder) -> &Vec<AuctionTurn> {
+        match bidder {
+            Bidder::First => &self.first_bids,
+            Bidder::Second => &self.second_bids,
+        }
+    }
+
+    pub fn bids_mut(&mut self, bidder: Bidder) -> &mut Vec<AuctionTurn> {
+        match bidder {
+            Bidder::First => &mut self.first_bids,
+            Bidder::Second => &mut self.second_bids,
+        }
+    }
+}

@@ -27,11 +27,11 @@ pub fn bidding_controls(link: &ComponentLink<Oak>, game: &GameData) -> Html {
 
     html! {
         <div class="bid__bidding-controls">
+            <button class=black>{"⊛"}</button>
             <button class=red>{"♦"}</button>
             <button class=black>{"♣"}</button>
             <button class=red>{"♥"}</button>
             <button class=black>{"♠"}</button>
-            <button class=black>{"⊛"}</button>
             <button class=black>{"↷"}</button>
         </div>
     }

@@ -21,12 +21,13 @@ use rand_pcg::Pcg64;
 use strum::IntoEnumIterator;
 
 use crate::model::{
+    bidding::Auction,
     game::{GameData, Hands, Trick},
     primitives::{Card, Position, Rank, Suit},
 };
 
 /// Creates a new [GameData] dealing hands to the four positions
-pub fn new_game(rng: &mut impl Rng) -> GameData {
+pub fn new_game(rng: &mut impl Rng, first: Position, second: Position) -> GameData {
     let mut cards = Vec::new();
     for suit in Suit::iter() {
         for rank in Rank::iter() {
@@ -49,6 +50,7 @@ pub fn new_game(rng: &mut impl Rng) -> GameData {
             dummy_hand: build_hand(&mut chunks),
             right_opponet_hand: build_hand(&mut chunks),
         },
+        auction: Auction { bid_number: 6, first, first_bids: vec![], second, second_bids: vec![] },
     }
 }
 
@@ -59,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_new_game() {
-        let g = new_game(&mut Pcg64::seed_from_u64(17));
+        let g = new_game(&mut Pcg64::seed_from_u64(17), Position::User, Position::Left);
         assert_eq!(g.hands.user_hand.len(), 13);
         assert_eq!(g.hands.left_opponent_hand.len(), 13);
         assert_eq!(g.hands.dummy_hand.len(), 13);

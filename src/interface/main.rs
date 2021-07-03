@@ -14,14 +14,16 @@
 
 //! Entry-point into our Yew application
 
+use anyhow::anyhow;
 use yew::prelude::*;
 
 use crate::{
     agents::heuristic::HeuristicAgent,
     game::{bidding_phase, deck, play_phase},
     model::{
+        bidding::Bid,
         game::GamePhase,
-        primitives::{Bid, CardId, Position},
+        primitives::{CardId, Position},
         state::State,
     },
 };
@@ -53,7 +55,11 @@ impl Component for Oak {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
             state: State {
-                phase: GamePhase::Auction(deck::new_game(&mut rand::thread_rng())),
+                phase: GamePhase::Auction(deck::new_game(
+                    &mut rand::thread_rng(),
+                    Position::User,
+                    Position::Left,
+                )),
                 agent: Box::from(HeuristicAgent {}),
             },
             link,
@@ -61,21 +67,31 @@ impl Component for Oak {
     }
 
     fn update(&mut self, action: Action) -> ShouldRender {
-        match action {
+        let result = match action {
             Action::Play(card_id) => match self.state.phase {
-                GamePhase::Auction(_) => panic!("Cannot play cards during auction phase"),
+                GamePhase::Auction(_) => Err(anyhow!("Cannot play cards during auction phase")),
                 GamePhase::Playing(ref mut data) => {
                     play_phase::resolve_card_play_action(data, &*self.state.agent, card_id)
                 }
             },
             Action::Continue => match self.state.phase {
-                GamePhase::Auction(_) => panic!("Cannot continue during auction phase"),
+                GamePhase::Auction(_) => Err(anyhow!("Cannot continue during auction phase")),
                 GamePhase::Playing(ref mut data) => {
                     play_phase::resolve_continue_action(data, &*self.state.agent)
                 }
             },
-            Action::Bid(bid) => bidding_phase::resolve_bid_action(&mut self.state, bid),
+            Action::Bid(bid) => match self.state.phase {
+                GamePhase::Auction(ref mut game) => {
+                    bidding_phase::resolve_bid_action(game, &*self.state.agent, bid)
+                }
+                GamePhase::Playing(_) => Err(anyhow!("Cannot bid during play phase")),
+            },
         };
+
+        if let Err(e) = result {
+            panic!("Error: {:?}", e);
+        }
+
         true
     }
 
