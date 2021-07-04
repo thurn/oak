@@ -17,13 +17,20 @@
 use std::fmt;
 
 use crate::model::{
-    game::PlayPhaseData,
+    bidding::{Bid, Bidder},
+    game::{GameData, PlayPhaseData},
     primitives::{CardId, Position},
 };
 
 pub trait Agent: fmt::Debug {
+    /// Invoked during the Bidding phase when it's the agent's turn to bid in a
+    /// given [Bidder] position. Should return the desired bid.
+    fn select_bid(&self, game: &GameData, bidder: Bidder) -> Bid;
+
     /// Invoked during the Play phase when it's the agent's turn to play a
     /// card, either to lead a new trick or to follow an existing one. Should
     /// return the index of a card in hand to play.
+    ///
+    /// ***Panics:*** If invoked when there are no legal plays
     fn select_play(&self, data: &PlayPhaseData, position: Position) -> usize;
 }

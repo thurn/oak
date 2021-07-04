@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Defines a simple agent which uses fixed heuristics to decide on its game
-//! actions
+//! Defines a simple agent which uses deterministic heuristics to decide on its
+//! game actions
 
 use std::cmp::Ordering;
 
@@ -21,7 +21,8 @@ use crate::{
     agents::agent::Agent,
     game::play_phase,
     model::{
-        game::PlayPhaseData,
+        bidding::{Bid, Bidder},
+        game::{GameData, PlayPhaseData},
         primitives::{CardId, Position},
     },
 };
@@ -30,6 +31,13 @@ use crate::{
 pub struct HeuristicAgent;
 
 impl Agent for HeuristicAgent {
+    /// Selects a bid, using the following bid priority: 8-card fit, 5-card
+    /// suits, 1st query, strong 4-card suit, additional queries. Aborts bidding
+    /// if predicted combined points is below a threshold
+    fn select_bid(&self, game: &GameData, bidder: Bidder) -> Bid {
+        Bid::Pass
+    }
+
     /// Wins the trick if possible & partner is not already winning, otherwise
     /// discards
     fn select_play(&self, data: &PlayPhaseData, position: Position) -> usize {
@@ -49,9 +57,8 @@ impl Agent for HeuristicAgent {
 /// event of a tie
 fn find_winning_card(game: &PlayPhaseData, position: Position) -> Option<usize> {
     play_phase::winning_plays(game, position)
-        .max_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
-            Ordering::Equal => a.rank.cmp(&b.rank),
-            ordering => ordering,
+        .max_by(|(_, a), (_, b)| {
+            play_phase::compare_card_power(game, *a, *b).then(a.rank.cmp(&b.rank))
         })
         .map(|(index, _)| index)
 }
@@ -59,9 +66,8 @@ fn find_winning_card(game: &PlayPhaseData, position: Position) -> Option<usize> 
 /// Discards the lowest-ranking card, either following suit or throwing off
 fn find_discard(game: &PlayPhaseData, position: Position) -> usize {
     play_phase::legal_plays(game, position)
-        .min_by(|(_, a), (_, b)| match play_phase::compare_card_power(game, *a, *b) {
-            Ordering::Equal => a.rank.cmp(&b.rank),
-            ordering => ordering,
+        .min_by(|(_, a), (_, b)| {
+            play_phase::compare_card_power(game, *a, *b).then(a.rank.cmp(&b.rank))
         })
         .map(|(index, _)| index)
         .expect("No legal plays")

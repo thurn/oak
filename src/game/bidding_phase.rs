@@ -114,31 +114,37 @@ pub fn trump_hand_evaluation(hand_score: HandScore, trump: Suit) -> HandEvaluati
     HandEvaluation::new(hand_score.scores.sum() + short_suit_points)
 }
 
+/// Produces a [BidResponse::HandBalance] for this hand
+pub fn hand_balance(hand_score: HandScore) -> BidResponse {
+    BidResponse::HandBalance(
+        if !Suit::iter().any(|suit| hand_score.counts.get(suit) <= 1) &&
+            Suit::iter().filter(|suit| hand_score.counts.get(*suit) <= 2).count() <= 1
+        {
+            HandBalance::Balanced // Balanced -- at most one doubleton, no
+                                  // singletons or voids
+        } else {
+            HandBalance::Unbalanced
+        },
+    )
+}
+
 /// Produces a [BidResponse::LongestSuit] response for this hand, identifying
-/// the balance and longest and strongest suit
-pub fn longest_suit(hand: &[Card]) -> BidResponse {
-    let HandScore { counts, scores } = hand_score(hand);
-    let balance = if !Suit::iter().any(|suit| counts.get(suit) <= 1) &&
-        Suit::iter().filter(|suit| counts.get(*suit) <= 2).count() <= 1
-    {
-        HandBalance::Balanced // Balanced -- at most one doubleton, no
-                              // singletons or voids
-    } else {
-        HandBalance::Unbalanced
-    };
+/// the longest and strongest suit
+pub fn longest_suit(hand_score: HandScore) -> BidResponse {
+    let HandScore { counts, scores } = hand_score;
 
-    let best = Suit::iter()
-        .max_by(|x, y| {
-            counts.get(*x).cmp(&counts.get(*y)).then(scores.get(*x).cmp(&scores.get(*y)))
-        })
-        .expect("Suit::iter() cannot be empty");
-
-    BidResponse::LongestSuit(balance, best)
+    BidResponse::LongestSuit(
+        Suit::iter()
+            .max_by(|x, y| {
+                counts.get(*x).cmp(&counts.get(*y)).then(scores.get(*x).cmp(&scores.get(*y)))
+            })
+            .expect("Suit::iter() cannot be empty"),
+    )
 }
 
 /// Produces a [BidResponse::WeakestSuit] response for this hand
-pub fn weakest_suit(hand: &[Card]) -> BidResponse {
-    let HandScore { counts, scores } = hand_score(hand);
+pub fn weakest_suit(hand_score: HandScore) -> BidResponse {
+    let HandScore { counts, scores } = hand_score;
     BidResponse::WeakestSuit(
         Suit::iter()
             .min_by(|x, y| {
@@ -154,16 +160,17 @@ pub fn rank_count(hand: &[Card], rank: Rank) -> BidResponse {
 }
 
 /// Returns the [BidResponse] for a [Bid::Query] bid
-pub fn query_bid_response(game: &GameData, bidder: Bidder) -> BidResponse {
+pub fn query_bid_response(game: &GameData, bidder: Bidder) -> Vec<BidResponse> {
     let hand = game.hand(game.auction.position(bidder).partner());
+    let hand_score = hand_score(hand);
     match game.auction.bids(bidder).iter().filter(|turn| turn.bid == Bid::Query).count() {
-        0 => BidResponse::HandEvaluation(HandEvaluation::new(hand_score(hand).scores.sum())),
-        1 => longest_suit(hand),
-        2 => weakest_suit(hand),
-        3 => rank_count(hand, Rank::Ace),
-        4 => rank_count(hand, Rank::King),
-        5 => rank_count(hand, Rank::Queen),
-        _ => BidResponse::Pass,
+        0 => vec![BidResponse::HandEvaluation(HandEvaluation::new(hand_score.scores.sum()), None)],
+        1 => vec![hand_balance(hand_score), longest_suit(hand_score)],
+        2 => vec![weakest_suit(hand_score)],
+        3 => vec![rank_count(hand, Rank::Ace)],
+        4 => vec![rank_count(hand, Rank::King)],
+        5 => vec![rank_count(hand, Rank::Queen)],
+        _ => vec![BidResponse::Pass],
     }
 }
 
@@ -178,8 +185,9 @@ pub fn previous_suit_response(
         .bids(bidder)
         .iter()
         .rev()
-        .filter_map(|AuctionTurn { response, .. }| match response {
-            BidResponse::SuitLength(s, len, op, _) if *s == suit => Some((*len, *op)),
+        .flat_map(|turn| &turn.responses)
+        .filter_map(|response| match response {
+            BidResponse::SuitLength(s, len, op) if *s == suit => Some((*len, *op)),
             _ => None,
         })
         .next()
@@ -193,50 +201,53 @@ pub fn suit_length(
     have: usize,
     constraint: usize,
     bias: LengthOperator,
-    evaluation: Option<HandEvaluation>,
 ) -> BidResponse {
     let op = match have.cmp(&constraint) {
-        Ordering::Less => LengthOperator::Lower,
+        Ordering::Less => LengthOperator::Lte,
         Ordering::Equal => bias,
-        Ordering::Greater => LengthOperator::Higher,
+        Ordering::Greater => LengthOperator::Gte,
     };
 
-    BidResponse::SuitLength(suit, constraint, op, evaluation)
+    BidResponse::SuitLength(suit, constraint, op)
 }
 
-/// Returns the [BidResponse] for a [Bid::Suit] bid
-pub fn suit_bid_response(game: &GameData, bidder: Bidder, suit: Suit) -> BidResponse {
+/// Returns a [BidResponse::SuitLength] for a [Bid::Suit] bid
+pub fn suit_bid_response(game: &GameData, bidder: Bidder, suit: Suit) -> Vec<BidResponse> {
     let score = hand_score(game.hand(game.auction.position(bidder).partner()));
     let count = score.counts.get(suit);
 
     if let Some((prev, op)) = previous_suit_response(game, bidder, suit) {
-        let eval = trump_hand_evaluation(score, suit);
         // If we've previously responded for this suit, we increment or decrement our
         // response by 1. If this would reveal the exact count, we provide an EqualTo
         // response.
-        match op {
-            _ if prev == count => suit_length(suit, count, prev, LengthOperator::Equal, Some(eval)),
-            LengthOperator::Lower => suit_length(suit, count, prev - 1, op, Some(eval)),
-            LengthOperator::Higher => suit_length(suit, count, prev + 1, op, Some(eval)),
-            LengthOperator::Equal => suit_length(suit, count, prev, op, Some(eval)),
-        }
+        let length = match op {
+            _ if prev == count => suit_length(suit, count, prev, LengthOperator::Equal),
+            LengthOperator::Lte => suit_length(suit, count, prev - 1, op),
+            LengthOperator::Gte => suit_length(suit, count, prev + 1, op),
+            LengthOperator::Equal => suit_length(suit, count, prev, op),
+        };
+
+        // We also include a hand evaluation updated based on this trump suit
+        vec![length, BidResponse::HandEvaluation(trump_hand_evaluation(score, suit), Some(suit))]
     } else {
-        // If this is the first inquiry about this suit, we return whether we have 4 or
-        // more cards in it
-        suit_length(suit, count, 4, LengthOperator::Higher, None)
+        // If this is the first response for a given suit, we return
+        // 1) whether we have >= 3 of that suit if this is the opening bid, or
+        // 2) whether we have >= 4 of that suit otherwise
+        let target = if game.auction.bids(bidder).is_empty() { 3 } else { 4 };
+        vec![suit_length(suit, count, target, LengthOperator::Gte)]
     }
 }
 
 /// Appends the appropriate [AuctionTurn] to the auction for a [Bid] from a
 /// given [Bidder]
 pub fn append_bid_response(game: &mut GameData, bidder: Bidder, bid: Bid) {
-    let response = match bid {
+    let responses = match bid {
         Bid::Query => query_bid_response(game, bidder),
         Bid::Suit(suit) => suit_bid_response(game, bidder, suit),
-        Bid::Pass => BidResponse::Pass,
+        Bid::Pass => vec![BidResponse::Pass],
     };
 
-    game.auction.bids_mut(bidder).push(AuctionTurn { bid, response });
+    game.auction.bids_mut(bidder).push(AuctionTurn { bid, responses });
 }
 
 /// Mutates the provided [GameData] to apply the user's [Bid].
@@ -265,7 +276,7 @@ mod tests {
     fn test_has_passed() {
         let mut g = test_helpers::create_test_bid_phase();
         assert_eq!(has_passed(&g.auction, Bidder::First), false);
-        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, response: BidResponse::Pass });
+        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, responses: vec![] });
         assert_eq!(has_passed(&g.auction, Bidder::First), true);
         assert_eq!(has_passed(&g.auction, Bidder::Second), false);
     }
@@ -274,9 +285,9 @@ mod tests {
     fn test_is_completed() {
         let mut g = test_helpers::create_test_bid_phase();
         assert_eq!(is_completed(&g.auction), false);
-        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, response: BidResponse::Pass });
+        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, responses: vec![] });
         assert_eq!(is_completed(&g.auction), false);
-        g.auction.second_bids.push(AuctionTurn { bid: Bid::Pass, response: BidResponse::Pass });
+        g.auction.second_bids.push(AuctionTurn { bid: Bid::Pass, responses: vec![] });
         assert_eq!(is_completed(&g.auction), true);
     }
 
@@ -284,19 +295,18 @@ mod tests {
     fn test_next_to_bid() {
         let mut g = test_helpers::create_test_bid_phase();
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::First));
-        g.auction.first_bids.push(AuctionTurn {
-            bid: Bid::Query,
-            response: BidResponse::HandEvaluation(HandEvaluation::Poor),
-        });
+        g.auction
+            .first_bids
+            .push(AuctionTurn::query(BidResponse::HandEvaluation(HandEvaluation::Poor, None)));
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::Second));
-        g.auction.second_bids.push(AuctionTurn {
-            bid: Bid::Query,
-            response: BidResponse::LongestSuit(HandBalance::Balanced, Suit::Hearts),
-        });
+        g.auction.second_bids.push(AuctionTurn::query(BidResponse::LongestSuit(
+            // HandBalance::Balanced,
+            Suit::Hearts,
+        )));
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::First));
-        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, response: BidResponse::Pass });
+        g.auction.first_bids.push(AuctionTurn { bid: Bid::Pass, responses: vec![] });
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::Second));
-        g.auction.second_bids.push(AuctionTurn { bid: Bid::Pass, response: BidResponse::Pass });
+        g.auction.second_bids.push(AuctionTurn { bid: Bid::Pass, responses: vec![] });
         assert_eq!(next_to_bid(&g.auction), None);
     }
 
@@ -304,12 +314,8 @@ mod tests {
     fn test_bids_of_type() {
         let mut g = test_helpers::create_test_bid_phase();
         assert_eq!(bids_of_type(&g.auction, Bidder::First, Bid::Suit(Suit::Hearts)), 0);
-        g.auction
-            .first_bids
-            .push(AuctionTurn { bid: Bid::Suit(Suit::Hearts), response: BidResponse::Pass });
-        g.auction
-            .first_bids
-            .push(AuctionTurn { bid: Bid::Suit(Suit::Diamonds), response: BidResponse::Pass });
+        g.auction.first_bids.push(AuctionTurn::suit(Suit::Hearts, BidResponse::Pass));
+        g.auction.first_bids.push(AuctionTurn::suit(Suit::Diamonds, BidResponse::Pass));
         assert_eq!(bids_of_type(&g.auction, Bidder::First, Bid::Suit(Suit::Hearts)), 1);
     }
 
@@ -364,14 +370,16 @@ mod tests {
         let g = test_helpers::create_test_bid_phase();
         // User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
         assert_eq!(
-            longest_suit(g.hand(Position::User)),
-            BidResponse::LongestSuit(HandBalance::Unbalanced, Suit::Clubs)
+            longest_suit(hand_score(g.hand(Position::User))),
+            // HandBalance::Unbalanced
+            BidResponse::LongestSuit(Suit::Clubs)
         );
 
         // Dummy: ♦6 ♦7 ♦8 ♦K ♣5 ♣K ♥4 ♥7 ♥J ♥Q ♠4 ♠5 ♠10
         assert_eq!(
-            longest_suit(g.hand(Position::Dummy)),
-            BidResponse::LongestSuit(HandBalance::Balanced, Suit::Hearts)
+            longest_suit(hand_score(g.hand(Position::Dummy))),
+            // HandBalance::Balanced
+            BidResponse::LongestSuit(Suit::Hearts)
         );
     }
 
@@ -379,10 +387,16 @@ mod tests {
     fn test_weakest_suit() {
         let g = test_helpers::create_test_bid_phase();
         // User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
-        assert_eq!(weakest_suit(g.hand(Position::User)), BidResponse::WeakestSuit(Suit::Diamonds));
+        assert_eq!(
+            weakest_suit(hand_score(g.hand(Position::User))),
+            BidResponse::WeakestSuit(Suit::Diamonds)
+        );
 
         // Dummy: ♦6 ♦7 ♦8 ♦K ♣5 ♣K ♥4 ♥7 ♥J ♥Q ♠4 ♠5 ♠10
-        assert_eq!(weakest_suit(g.hand(Position::Dummy)), BidResponse::WeakestSuit(Suit::Spades));
+        assert_eq!(
+            weakest_suit(hand_score(g.hand(Position::Dummy))),
+            BidResponse::WeakestSuit(Suit::Spades)
+        );
     }
 
     #[test]
@@ -409,33 +423,39 @@ mod tests {
         );
     }
 
-    fn get_dummy_response(bid: Bid, previous: Vec<AuctionTurn>) -> BidResponse {
+    fn get_dummy_response(bid: Bid, previous: Vec<AuctionTurn>) -> Vec<BidResponse> {
         let mut g = test_helpers::create_test_bid_phase();
         g.auction.first_bids = previous;
         append_bid_response(&mut g, Bidder::First, bid);
-        g.auction.first_bids.last().expect("Expected response").response
+        g.auction.first_bids.last().expect("Expected response").responses.clone()
     }
 
     #[test]
     fn test_query_bid_responses() {
         // Dummy: ♦6 ♦7 ♦8 ♦K ♣5 ♣K ♥4 ♥7 ♥J ♥Q ♠4 ♠5 ♠10
         fn query(response: BidResponse) -> AuctionTurn {
-            AuctionTurn { bid: Bid::Query, response }
+            AuctionTurn { bid: Bid::Query, responses: vec![response] }
         }
 
-        let eval = BidResponse::HandEvaluation(HandEvaluation::Poor);
-        assert_eq!(get_dummy_response(Bid::Query, vec![]), eval);
+        let eval = BidResponse::HandEvaluation(HandEvaluation::Poor, None);
+        assert_eq!(get_dummy_response(Bid::Query, vec![]), vec![eval]);
 
-        let longest = BidResponse::LongestSuit(HandBalance::Balanced, Suit::Hearts);
-        assert_eq!(get_dummy_response(Bid::Query, vec![query(eval)]), longest);
+        let longest = BidResponse::LongestSuit(Suit::Hearts);
+        assert_eq!(
+            get_dummy_response(Bid::Query, vec![query(eval)]),
+            vec![BidResponse::HandBalance(HandBalance::Balanced), longest]
+        );
 
         let weakest = BidResponse::WeakestSuit(Suit::Spades);
-        assert_eq!(get_dummy_response(Bid::Query, vec![query(eval), query(longest)]), weakest);
+        assert_eq!(
+            get_dummy_response(Bid::Query, vec![query(eval), query(longest)]),
+            vec![weakest]
+        );
 
         let aces = BidResponse::RankCount(Rank::Ace, 0);
         assert_eq!(
             get_dummy_response(Bid::Query, vec![query(eval), query(longest), query(weakest)]),
-            aces
+            vec![aces]
         );
 
         let kings = BidResponse::RankCount(Rank::King, 2);
@@ -444,7 +464,7 @@ mod tests {
                 Bid::Query,
                 vec![query(eval), query(longest), query(weakest), query(aces)]
             ),
-            kings
+            vec![kings]
         );
 
         let queens = BidResponse::RankCount(Rank::Queen, 1);
@@ -453,7 +473,7 @@ mod tests {
                 Bid::Query,
                 vec![query(eval), query(longest), query(weakest), query(aces), query(kings)]
             ),
-            queens
+            vec![queens]
         );
 
         assert_eq!(
@@ -468,126 +488,78 @@ mod tests {
                     query(queens)
                 ]
             ),
-            BidResponse::Pass
+            vec![BidResponse::Pass]
         );
     }
 
     #[test]
     fn test_suit_bid_responses() {
         // Dummy: ♦6 ♦7 ♦8 ♦K ♣5 ♣K ♥4 ♥7 ♥J ♥Q ♠4 ♠5 ♠10
-        let lt4 = BidResponse::SuitLength(Suit::Clubs, 4, LengthOperator::Lower, None);
-        assert_eq!(get_dummy_response(Bid::Suit(Suit::Clubs), vec![]), lt4);
+        let lt3c = BidResponse::SuitLength(Suit::Clubs, 3, LengthOperator::Lte);
+        assert_eq!(get_dummy_response(Bid::Suit(Suit::Clubs), vec![]), vec![lt3c]);
 
-        let lt3 = BidResponse::SuitLength(
-            Suit::Clubs,
-            3,
-            LengthOperator::Lower,
-            Some(HandEvaluation::Poor),
-        );
+        let lt2c = BidResponse::SuitLength(Suit::Clubs, 2, LengthOperator::Lte);
         assert_eq!(
-            get_dummy_response(
-                Bid::Suit(Suit::Clubs),
-                vec![AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt4 }]
-            ),
-            lt3
-        );
-
-        let lt2 = BidResponse::SuitLength(
-            Suit::Clubs,
-            2,
-            LengthOperator::Lower,
-            Some(HandEvaluation::Poor),
-        );
-        assert_eq!(
-            get_dummy_response(
-                Bid::Suit(Suit::Clubs),
-                vec![
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt4 },
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt3 }
-                ]
-            ),
-            lt2
+            get_dummy_response(Bid::Suit(Suit::Clubs), vec![AuctionTurn::suit(Suit::Clubs, lt3c)]),
+            vec![lt2c, BidResponse::HandEvaluation(HandEvaluation::Poor, Some(Suit::Clubs))]
         );
 
         assert_eq!(
             get_dummy_response(
                 Bid::Suit(Suit::Clubs),
-                vec![
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt4 },
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt3 },
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt2 }
-                ]
+                vec![AuctionTurn::suit(Suit::Clubs, lt3c), AuctionTurn::suit(Suit::Clubs, lt2c)]
             ),
-            BidResponse::SuitLength(
-                Suit::Clubs,
-                2,
-                LengthOperator::Equal,
-                Some(HandEvaluation::Poor)
-            )
+            vec![
+                BidResponse::SuitLength(Suit::Clubs, 2, LengthOperator::Equal),
+                BidResponse::HandEvaluation(HandEvaluation::Poor, Some(Suit::Clubs))
+            ]
         );
 
-        let gt4 = BidResponse::SuitLength(Suit::Hearts, 4, LengthOperator::Higher, None);
-        assert_eq!(get_dummy_response(Bid::Suit(Suit::Hearts), vec![]), gt4);
+        let gt3s = BidResponse::SuitLength(Suit::Spades, 3, LengthOperator::Gte);
+        assert_eq!(get_dummy_response(Bid::Suit(Suit::Spades), vec![]), vec![gt3s]);
 
+        // Some(HandEvaluation::Fair)
         assert_eq!(
             get_dummy_response(
-                Bid::Suit(Suit::Hearts),
-                vec![AuctionTurn { bid: Bid::Suit(Suit::Hearts), response: gt4 }]
+                Bid::Suit(Suit::Spades),
+                vec![AuctionTurn::suit(Suit::Spades, gt3s)]
             ),
-            BidResponse::SuitLength(
-                Suit::Hearts,
-                4,
-                LengthOperator::Equal,
-                Some(HandEvaluation::Fair)
-            )
+            vec![
+                BidResponse::SuitLength(Suit::Spades, 3, LengthOperator::Equal),
+                BidResponse::HandEvaluation(HandEvaluation::Fair, Some(Suit::Spades))
+            ]
         );
 
         assert_eq!(
-            get_dummy_response(
-                Bid::Suit(Suit::Hearts),
-                vec![AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt4 }]
-            ),
-            gt4
+            get_dummy_response(Bid::Suit(Suit::Spades), vec![AuctionTurn::suit(Suit::Clubs, lt3c)]),
+            vec![BidResponse::SuitLength(Suit::Spades, 4, LengthOperator::Lte)]
         );
 
         assert_eq!(
             get_dummy_response(
                 Bid::Suit(Suit::Hearts),
                 vec![
-                    AuctionTurn { bid: Bid::Suit(Suit::Clubs), response: lt4 },
-                    AuctionTurn { bid: Bid::Suit(Suit::Hearts), response: gt4 }
+                    AuctionTurn::suit(Suit::Clubs, lt3c),
+                    AuctionTurn::suit(
+                        Suit::Hearts,
+                        BidResponse::SuitLength(Suit::Hearts, 4, LengthOperator::Gte)
+                    )
                 ]
             ),
-            BidResponse::SuitLength(
-                Suit::Hearts,
-                4,
-                LengthOperator::Equal,
-                Some(HandEvaluation::Fair)
-            )
-        );
-
-        assert_eq!(
-            get_dummy_response(
-                Bid::Suit(Suit::Hearts),
-                vec![AuctionTurn {
-                    bid: Bid::Query,
-                    response: BidResponse::HandEvaluation(HandEvaluation::Excellent)
-                }]
-            ),
-            gt4
+            vec![
+                BidResponse::SuitLength(Suit::Hearts, 4, LengthOperator::Equal),
+                BidResponse::HandEvaluation(HandEvaluation::Fair, Some(Suit::Hearts))
+            ]
         );
     }
 
     #[test]
     fn test_pass_bid_responses() {
-        assert_eq!(get_dummy_response(Bid::Pass, vec![]), BidResponse::Pass);
+        assert_eq!(get_dummy_response(Bid::Pass, vec![]), vec![BidResponse::Pass]);
 
         assert_eq!(
-            get_dummy_response(
-                Bid::Pass,
-                vec![AuctionTurn { bid: Bid::Query, response: BidResponse::Pass }]
-            ),
-            BidResponse::Pass
+            get_dummy_response(Bid::Pass, vec![AuctionTurn::query(BidResponse::Pass)]),
+            vec![BidResponse::Pass]
         );
     }
 }
