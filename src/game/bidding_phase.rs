@@ -14,7 +14,7 @@
 
 //! Functions for implementing the bidding phase of a game
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, mem};
 
 use anyhow::{anyhow, Result};
 use strum::IntoEnumIterator;
@@ -32,7 +32,7 @@ use crate::{
             HandRating,
             LengthOperator,
         },
-        game::GameData,
+        game::{Contract, GameData, GamePhase, PlayPhaseData, Trick},
         primitives::{Card, Position, Rank, Suit, SuitData},
         state::State,
     },
@@ -118,7 +118,7 @@ pub fn evaluate_hand(hand_score: HandScore, trump_suit: Option<Suit>) -> usize {
 
 /// Wraps the result of [evaluate_hand] in a [BidResponse::HandEvaluation]
 pub fn hand_evaluation(hand_score: HandScore, trump_suit: Option<Suit>) -> BidResponse {
-    BidResponse::HandEvaluation(evaluate_hand(hand_score, trump_suit), trump_suit)
+    BidResponse::HandEvaluation(HandRating::new(evaluate_hand(hand_score, trump_suit)), trump_suit)
 }
 
 /// Produces a [BidResponse::HandBalance] for this hand
@@ -256,7 +256,8 @@ pub fn append_bid_response(game: &mut GameData, bidder: Bidder, bid: Bid) {
     game.auction.bids_mut(bidder).push(AuctionTurn { bid, responses });
 }
 
-/// Mutates the provided [GameData] to apply the user's [Bid].
+/// Mutates the provided [GameData] to apply the user's [Bid], optionally
+/// returning a new [GamePhase]
 pub fn resolve_bid_action(game: &mut GameData, agent: &dyn Agent, bid: Bid) -> Result<()> {
     match next_to_bid(&game.auction) {
         Some(bidder) if game.auction.position(bidder) == Position::User => {
@@ -268,6 +269,7 @@ pub fn resolve_bid_action(game: &mut GameData, agent: &dyn Agent, bid: Bid) -> R
             }
 
             game.auction.bid_number += 1;
+
             Ok(())
         }
         _ => Err(anyhow!("Not the user's turn")),
@@ -309,7 +311,9 @@ mod tests {
     fn test_next_to_bid() {
         let mut g = test_helpers::create_test_bid_phase();
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::First));
-        g.auction.first_bids.push(AuctionTurn::query(BidResponse::HandEvaluation(9, None)));
+        g.auction
+            .first_bids
+            .push(AuctionTurn::query(BidResponse::HandEvaluation(HandRating::Poor, None)));
         assert_eq!(next_to_bid(&g.auction), Some(Bidder::Second));
         g.auction.second_bids.push(AuctionTurn::query(BidResponse::LongestSuit(
             // HandBalance::Balanced,
@@ -359,21 +363,21 @@ mod tests {
         // User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
         assert_eq!(
             hand_evaluation(hand_score(g.hand(Position::User)), Some(Suit::Clubs)),
-            BidResponse::HandEvaluation(16, Some(Suit::Clubs))
+            BidResponse::HandEvaluation(HandRating::Excellent, Some(Suit::Clubs))
         );
         assert_eq!(
             hand_evaluation(hand_score(g.hand(Position::User)), Some(Suit::Diamonds)),
-            BidResponse::HandEvaluation(11, Some(Suit::Diamonds))
+            BidResponse::HandEvaluation(HandRating::Fair, Some(Suit::Diamonds))
         );
 
         // Dummy: ♦6 ♦7 ♦8 ♦K ♣5 ♣K ♥4 ♥7 ♥J ♥Q ♠4 ♠5 ♠10
         assert_eq!(
             hand_evaluation(hand_score(g.hand(Position::Dummy)), Some(Suit::Clubs)),
-            BidResponse::HandEvaluation(9, Some(Suit::Clubs))
+            BidResponse::HandEvaluation(HandRating::Poor, Some(Suit::Clubs))
         );
         assert_eq!(
             hand_evaluation(hand_score(g.hand(Position::Dummy)), Some(Suit::Diamonds)),
-            BidResponse::HandEvaluation(10, Some(Suit::Diamonds))
+            BidResponse::HandEvaluation(HandRating::Fair, Some(Suit::Diamonds))
         );
     }
 
@@ -449,7 +453,7 @@ mod tests {
             AuctionTurn { bid: Bid::Query, responses: vec![response] }
         }
 
-        let eval = BidResponse::HandEvaluation(9, None);
+        let eval = BidResponse::HandEvaluation(HandRating::Poor, None);
         assert_eq!(get_dummy_response(Bid::Query, vec![]), vec![eval]);
 
         let longest = BidResponse::LongestSuit(Suit::Hearts);
@@ -513,7 +517,7 @@ mod tests {
         let lt2c = BidResponse::SuitLength(Suit::Clubs, 2, LengthOperator::Lte);
         assert_eq!(
             get_dummy_response(Bid::Suit(Suit::Clubs), vec![AuctionTurn::suit(Suit::Clubs, lt3c)]),
-            vec![lt2c, BidResponse::HandEvaluation(9, Some(Suit::Clubs))]
+            vec![lt2c, BidResponse::HandEvaluation(HandRating::Poor, Some(Suit::Clubs))]
         );
 
         assert_eq!(
@@ -523,7 +527,7 @@ mod tests {
             ),
             vec![
                 BidResponse::SuitLength(Suit::Clubs, 2, LengthOperator::Equal),
-                BidResponse::HandEvaluation(9, Some(Suit::Clubs))
+                BidResponse::HandEvaluation(HandRating::Poor, Some(Suit::Clubs))
             ]
         );
 
@@ -538,7 +542,7 @@ mod tests {
             ),
             vec![
                 BidResponse::SuitLength(Suit::Spades, 3, LengthOperator::Equal),
-                BidResponse::HandEvaluation(10, Some(Suit::Spades))
+                BidResponse::HandEvaluation(HandRating::Fair, Some(Suit::Spades))
             ]
         );
 
@@ -560,7 +564,7 @@ mod tests {
             ),
             vec![
                 BidResponse::SuitLength(Suit::Hearts, 4, LengthOperator::Equal),
-                BidResponse::HandEvaluation(10, Some(Suit::Hearts))
+                BidResponse::HandEvaluation(HandRating::Fair, Some(Suit::Hearts))
             ]
         );
     }
@@ -583,7 +587,7 @@ mod tests {
         assert_eq!(g.auction.bids(Bidder::First)[0].bid, Bid::Query);
         assert_eq!(
             g.auction.bids(Bidder::First)[0].responses,
-            vec![BidResponse::HandEvaluation(9, None)]
+            vec![BidResponse::HandEvaluation(HandRating::Poor, None)]
         );
         assert_eq!(g.auction.bids(Bidder::Second)[0].bid, Bid::Pass);
         assert_eq!(g.auction.bids(Bidder::Second)[0].responses, vec![BidResponse::Pass]);

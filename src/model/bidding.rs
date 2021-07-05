@@ -50,6 +50,17 @@ impl HandRating {
             _ => Self::Superb,
         }
     }
+
+    pub fn approximate_points(&self) -> usize {
+        match self {
+            Self::Terrible => 5,
+            Self::Poor => 8,
+            Self::Fair => 10,
+            Self::Good => 13,
+            Self::Excellent => 16,
+            Self::Superb => 19,
+        }
+    }
 }
 
 /// Description of the distribution of a hand. Traditionally a 'balanced hand'
@@ -90,7 +101,7 @@ pub enum BidResponse {
 
     /// Hand strength evaluation in points, optionally in the context of a given
     /// trump suit
-    HandEvaluation(usize, Option<Suit>),
+    HandEvaluation(HandRating, Option<Suit>),
 
     /// Constraint on the length of a suit, optionally including a hand
     /// evaluation for this trump suit

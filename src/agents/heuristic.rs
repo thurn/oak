@@ -106,12 +106,17 @@ fn predicted_combined_points(
     responses
         .iter()
         .filter_map(|r| match r {
-            BidResponse::HandEvaluation(score, Some(t))
+            BidResponse::HandEvaluation(rating, Some(t))
                 if trump.map_or(false, |trump| trump == *t) =>
             {
-                Some(score + bidding_phase::evaluate_hand(hand_score, Some(*t)))
+                Some(
+                    rating.approximate_points() +
+                        bidding_phase::evaluate_hand(hand_score, Some(*t)),
+                )
             }
-            BidResponse::HandEvaluation(score, _) => Some(score + hand_score.scores.sum()),
+            BidResponse::HandEvaluation(rating, _) => {
+                Some(rating.approximate_points() + hand_score.scores.sum())
+            }
             _ => None,
         })
         .max()
