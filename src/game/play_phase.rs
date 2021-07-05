@@ -353,9 +353,12 @@ mod tests {
 
     #[test]
     fn test_resolve_card_play_action() {
-        let (mut data, agent) = test_helpers::create_test_data_and_agent();
+        let mut data = test_helpers::create_test_play_phase();
+        let agent = test_helpers::create_test_agent();
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 0)).unwrap();
+        assert!(
+            resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 0)).is_ok()
+        );
         assert_eq!(
             data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Clubs, Rank::Two)
@@ -365,7 +368,9 @@ mod tests {
             Card::new(Suit::Clubs, Rank::Four)
         );
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::Dummy, 4)).unwrap();
+        assert!(
+            resolve_card_play_action(&mut data, &*agent, CardId::new(Position::Dummy, 4)).is_ok()
+        );
         assert_eq!(
             data.trick.card_played(Position::Dummy).unwrap(),
             Card::new(Suit::Clubs, Rank::Five)
@@ -375,7 +380,9 @@ mod tests {
             Card::new(Suit::Clubs, Rank::Three)
         );
 
-        resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 11)).unwrap();
+        assert!(
+            resolve_card_play_action(&mut data, &*agent, CardId::new(Position::User, 11)).is_ok()
+        );
         assert_eq!(
             data.trick.card_played(Position::User).unwrap(),
             Card::new(Suit::Spades, Rank::King)
@@ -390,14 +397,15 @@ mod tests {
 
     #[test]
     fn test_resolve_continue_action() {
-        let (mut data, agent) = test_helpers::create_test_data_and_agent();
+        let mut data = test_helpers::create_test_play_phase();
+        let agent = test_helpers::create_test_agent();
 
         data.trick.set_card_played(Position::User, Card::new(Suit::Spades, Rank::Two));
         data.trick.set_card_played(Position::Left, Card::new(Suit::Spades, Rank::Three));
         data.trick.set_card_played(Position::Dummy, Card::new(Suit::Hearts, Rank::Ace));
         data.trick.set_card_played(Position::Right, Card::new(Suit::Spades, Rank::Five));
 
-        resolve_continue_action(&mut data, &*agent).unwrap();
+        assert!(resolve_continue_action(&mut data, &*agent).is_ok());
 
         assert_eq!(
             data.trick.card_played(Position::Right).unwrap(),

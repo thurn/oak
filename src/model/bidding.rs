@@ -28,9 +28,9 @@ pub enum Bid {
     Pass,
 }
 
-/// An evaluation of the strength of a hand
+/// A rating of the strength of a hand
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, EnumIter)]
-pub enum HandEvaluation {
+pub enum HandRating {
     Terrible,
     Poor,
     Fair,
@@ -39,7 +39,7 @@ pub enum HandEvaluation {
     Superb,
 }
 
-impl HandEvaluation {
+impl HandRating {
     pub fn new(score: usize) -> Self {
         match score {
             0..=5 => Self::Terrible,
@@ -48,17 +48,6 @@ impl HandEvaluation {
             13..=15 => Self::Good,
             16..=18 => Self::Excellent,
             _ => Self::Superb,
-        }
-    }
-
-    pub fn to_range(self) -> RangeInclusive<usize> {
-        match self {
-            HandEvaluation::Terrible => 0..=5,
-            HandEvaluation::Poor => 6..=9,
-            HandEvaluation::Fair => 10..=12,
-            HandEvaluation::Good => 13..=15,
-            HandEvaluation::Excellent => 16..=18,
-            HandEvaluation::Superb => 19..=40,
         }
     }
 }
@@ -99,9 +88,9 @@ pub enum BidResponse {
     /// No response
     Pass,
 
-    /// Hand strength evaluation, optionally in the context of a given trump
-    /// suit
-    HandEvaluation(HandEvaluation, Option<Suit>),
+    /// Hand strength evaluation in points, optionally in the context of a given
+    /// trump suit
+    HandEvaluation(usize, Option<Suit>),
 
     /// Constraint on the length of a suit, optionally including a hand
     /// evaluation for this trump suit
@@ -140,6 +129,15 @@ impl AuctionTurn {
 pub enum Bidder {
     First,
     Second,
+}
+
+impl Bidder {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Self::First => Self::Second,
+            Self::Second => Self::First,
+        }
+    }
 }
 
 #[derive(Debug)]

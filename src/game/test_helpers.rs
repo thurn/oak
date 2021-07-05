@@ -31,7 +31,6 @@ use crate::{
 
 /// Creates a [PlayPhaseData] with the following starting configuration:
 /// - Contract: No Trump @ 7 tricks, User is declarer
-/// - Phase: Bidding
 /// - Lead: User
 /// - Hands:
 ///   - User:  ♣2 ♣6 ♣9 ♣10 ♣A ♥6 ♥9 ♥10 ♥A ♠2 ♠7 ♠8 ♠K
@@ -40,7 +39,7 @@ use crate::{
 ///   - Right: ♦4 ♦5 ♦J ♦A  ♣3 ♣7 ♣J ♣Q  ♥2 ♥3 ♠9 ♠J ♠Q
 pub fn create_test_play_phase() -> PlayPhaseData {
     PlayPhaseData {
-        game: deck::new_game(&mut Pcg64::seed_from_u64(17), Position::User, Position::Left),
+        game: deck::new_game(&mut Pcg64::seed_from_u64(17), Position::User, Position::Right),
         trick: Trick::new(Position::User),
         contract: Contract { trump: None, tricks: 7, declarer: Position::User },
     }
@@ -48,10 +47,10 @@ pub fn create_test_play_phase() -> PlayPhaseData {
 
 /// Creates a [GameData] with the following configuration:
 /// - First Bidder: User
-/// - Second Bidder: Left
+/// - Second Bidder: Right
 /// - Hands: as in [create_test_play_phase]
 pub fn create_test_bid_phase() -> GameData {
-    deck::new_game(&mut Pcg64::seed_from_u64(17), Position::User, Position::Left)
+    deck::new_game(&mut Pcg64::seed_from_u64(17), Position::User, Position::Right)
 }
 
 pub const USER_CARD_0: Card = Card { suit: Suit::Clubs, rank: Rank::Two };
@@ -59,12 +58,13 @@ pub const USER_CARD_0: Card = Card { suit: Suit::Clubs, rank: Rank::Two };
 /// Creates a [State] using [create_test_game] and [ConstantAgent], using the
 /// same configuration.
 pub fn create_test_state() -> State {
-    let (data, agent) = create_test_data_and_agent();
+    let data = create_test_play_phase();
+    let agent = create_test_agent();
     State { phase: GamePhase::Playing(data), agent }
 }
 
-pub fn create_test_data_and_agent() -> (PlayPhaseData, Box<dyn agent::Agent>) {
-    (create_test_play_phase(), Box::from(ConstantAgent {}))
+pub fn create_test_agent() -> Box<dyn agent::Agent> {
+    Box::from(ConstantAgent {})
 }
 
 /// Creates a new game in the 'game over' state
