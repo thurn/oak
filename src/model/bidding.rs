@@ -14,7 +14,10 @@
 
 //! Types related to bidding
 
-use std::ops::RangeInclusive;
+use std::{
+    fmt::{self, Display, Formatter},
+    ops::RangeInclusive,
+};
 
 use strum_macros::EnumIter;
 
@@ -60,6 +63,23 @@ impl HandRating {
             Self::Excellent => 16,
             Self::Superb => 19,
         }
+    }
+}
+
+impl Display for HandRating {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                HandRating::Terrible => "Terrible",
+                HandRating::Poor => "Poor",
+                HandRating::Fair => "Fair",
+                HandRating::Good => "Good",
+                HandRating::Excellent => "Excellent",
+                HandRating::Superb => "Superb",
+            }
+        )
     }
 }
 

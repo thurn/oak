@@ -310,6 +310,7 @@ pub fn resolve_bid_action(phase: &mut GamePhase, agent: &dyn Agent, bid: Bid) ->
                 append_bid_response(game, bidder, bid);
 
                 let opposite = bidder.opposite();
+                // Todo while(next_to_bid) == agent
                 if next_to_bid(&game.auction) == Some(opposite) {
                     append_bid_response(game, opposite, agent.select_bid(game, opposite))
                 }
