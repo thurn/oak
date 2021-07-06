@@ -245,7 +245,7 @@ pub fn suit_bid_response(game: &GameData, bidder: Bidder, suit: Suit) -> Vec<Bid
 }
 
 /// Appends the appropriate [AuctionTurn] to the auction for a [Bid] from a
-/// given [Bidder]
+/// given [Bidder], incrementing the bid number if needed
 pub fn append_bid_response(game: &mut GameData, bidder: Bidder, bid: Bid) {
     let responses = match bid {
         Bid::Query => query_bid_response(game, bidder),
@@ -254,25 +254,75 @@ pub fn append_bid_response(game: &mut GameData, bidder: Bidder, bid: Bid) {
     };
 
     game.auction.bids_mut(bidder).push(AuctionTurn { bid, responses });
+
+    if game.auction.first_bids.len() == game.auction.second_bids.len() ||
+        has_passed(&game.auction, bidder.opposite())
+    {
+        game.auction.bid_number += 1;
+    }
 }
 
-/// Mutates the provided [GameData] to apply the user's [Bid], optionally
-/// returning a new [GamePhase]
-pub fn resolve_bid_action(game: &mut GameData, agent: &dyn Agent, bid: Bid) -> Result<()> {
-    match next_to_bid(&game.auction) {
-        Some(bidder) if game.auction.position(bidder) == Position::User => {
-            append_bid_response(game, bidder, bid);
+fn find_contract(game: &GameData, declarer: Bidder) -> Contract {
+    Contract {
+        trump: game
+            .auction
+            .bids(declarer)
+            .iter()
+            .rev()
+            .filter(|turn| !matches!(turn, AuctionTurn { bid: Bid::Pass, .. }))
+            .map(|bid| match bid {
+                AuctionTurn { bid: Bid::Suit(suit), .. } => Some(*suit),
+                _ => None,
+            })
+            .next()
+            .flatten(),
+        tricks: game.auction.bid_number - 1, // Final round of bidding does not count
+        declarer: game.auction.position(declarer),
+    }
+}
 
-            let opposite = bidder.opposite();
-            if next_to_bid(&game.auction) == Some(opposite) {
-                append_bid_response(game, opposite, agent.select_bid(game, opposite))
-            }
+pub fn advance_to_play_phase(phase: &mut GamePhase) -> Result<()> {
+    // Temporarily set the phase to 'Starting' while renovations are ongoing
+    match mem::replace(phase, GamePhase::Starting) {
+        GamePhase::Auction(game) => {
+            let declarer = if game.auction.first_bids.len() > game.auction.second_bids.len() {
+                Bidder::First
+            } else {
+                Bidder::Second
+            };
 
-            game.auction.bid_number += 1;
+            let trick = Trick::new(game.auction.position(declarer));
+            let contract = find_contract(&game, declarer);
 
+            *phase = GamePhase::Playing(PlayPhaseData { game, trick, contract });
             Ok(())
         }
-        _ => Err(anyhow!("Not the user's turn")),
+        _ => Err(anyhow!("Not in the Auction phase")),
+    }
+}
+
+/// Mutates the provided [GamePhase] to apply the user's [Bid], transitioning it
+/// to [GamePhase::Playing] if the auction is now completed.
+pub fn resolve_bid_action(phase: &mut GamePhase, agent: &dyn Agent, bid: Bid) -> Result<()> {
+    match phase {
+        GamePhase::Auction(ref mut game) => match next_to_bid(&game.auction) {
+            Some(bidder) if game.auction.position(bidder) == Position::User => {
+                append_bid_response(game, bidder, bid);
+
+                let opposite = bidder.opposite();
+                if next_to_bid(&game.auction) == Some(opposite) {
+                    append_bid_response(game, opposite, agent.select_bid(game, opposite))
+                }
+
+                if is_completed(&game.auction) {
+                    advance_to_play_phase(phase)
+                } else {
+                    Ok(())
+                }
+            }
+            _ => Err(anyhow!("Not the user's turn")),
+        },
+        _ => Err(anyhow!("Can only bid during the Auction phase")),
     }
 }
 
@@ -580,22 +630,88 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_bid_action() {
-        let mut g = test_helpers::create_test_bid_phase();
-        let agent = test_helpers::create_test_agent();
-        assert!(resolve_bid_action(&mut g, &*agent, Bid::Query).is_ok());
-        assert_eq!(g.auction.bids(Bidder::First)[0].bid, Bid::Query);
+    fn test_advance_to_play_phase() {
+        fn run(
+            first: Vec<AuctionTurn>,
+            second: Vec<AuctionTurn>,
+            round: usize,
+        ) -> (Contract, Trick) {
+            let agent = test_helpers::create_test_agent();
+            let mut game = test_helpers::create_test_bid_phase();
+            game.auction.first_bids.extend(first);
+            game.auction.second_bids.extend(second);
+            game.auction.bid_number = round;
+            let mut phase = GamePhase::Auction(game);
+
+            resolve_bid_action(&mut phase, &*agent, Bid::Pass).unwrap();
+
+            if let GamePhase::Playing(data) = phase {
+                (data.contract, data.trick)
+            } else {
+                panic!("Expected GamePhase::Playing")
+            }
+        }
+
+        let pass = AuctionTurn { bid: Bid::Pass, responses: vec![BidResponse::Pass] };
+        let diamonds = AuctionTurn {
+            bid: Bid::Suit(Suit::Diamonds),
+            responses: vec![BidResponse::SuitLength(Suit::Diamonds, 5, LengthOperator::Gte)],
+        };
+        let query = AuctionTurn {
+            bid: Bid::Query,
+            responses: vec![BidResponse::HandEvaluation(HandRating::Good, None)],
+        };
+
+        let (contract, trick) = run(vec![], vec![], 6);
+        assert_eq!(contract, Contract { trump: None, tricks: 6, declarer: Position::Right });
+        assert_eq!(trick, Trick::new(Position::Right));
+
+        let (contract, trick) = run(vec![diamonds.clone()], vec![pass.clone()], 7);
         assert_eq!(
-            g.auction.bids(Bidder::First)[0].responses,
+            contract,
+            Contract { trump: Some(Suit::Diamonds), tricks: 7, declarer: Position::User }
+        );
+        assert_eq!(trick, Trick::new(Position::User));
+
+        let (contract, trick) = run(vec![query.clone()], vec![pass.clone()], 7);
+        assert_eq!(contract, Contract { trump: None, tricks: 7, declarer: Position::User });
+        assert_eq!(trick, Trick::new(Position::User));
+    }
+
+    #[test]
+    fn test_resolve_bid_action() {
+        let g = test_helpers::create_test_bid_phase();
+        let mut phase = GamePhase::Auction(g);
+        fn get_game(phase: &GamePhase) -> &GameData {
+            if let GamePhase::Auction(g) = phase {
+                g
+            } else {
+                panic!("Expected a GamePhase::Auction");
+            }
+        }
+
+        let agent = test_helpers::create_test_agent();
+        assert!(resolve_bid_action(&mut phase, &*agent, Bid::Query).is_ok());
+        assert_eq!(get_game(&phase).auction.bids(Bidder::First)[0].bid, Bid::Query);
+        assert_eq!(
+            get_game(&phase).auction.bids(Bidder::First)[0].responses,
             vec![BidResponse::HandEvaluation(HandRating::Poor, None)]
         );
-        assert_eq!(g.auction.bids(Bidder::Second)[0].bid, Bid::Pass);
-        assert_eq!(g.auction.bids(Bidder::Second)[0].responses, vec![BidResponse::Pass]);
+        assert_eq!(get_game(&phase).auction.bids(Bidder::Second)[0].bid, Bid::Pass);
+        assert_eq!(
+            get_game(&phase).auction.bids(Bidder::Second)[0].responses,
+            vec![BidResponse::Pass]
+        );
 
-        assert!(resolve_bid_action(&mut g, &*agent, Bid::Pass).is_ok());
-        assert_eq!(g.auction.bids(Bidder::First)[1].bid, Bid::Pass);
-        assert_eq!(g.auction.bids(Bidder::First)[1].responses, vec![BidResponse::Pass]);
-
-        assert!(resolve_bid_action(&mut g, &*agent, Bid::Pass).is_err());
+        assert!(resolve_bid_action(&mut phase, &*agent, Bid::Pass).is_ok());
+        if let GamePhase::Playing(data) = phase {
+            assert_eq!(
+                data.contract,
+                Contract { trump: None, tricks: 7, declarer: Position::User }
+            );
+            assert_eq!(data.trick, Trick::new(Position::User))
+        } else {
+            panic!("Expected GamePhase::Playing");
+        }
     }
 }

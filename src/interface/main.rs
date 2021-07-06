@@ -20,6 +20,7 @@ use yew::prelude::*;
 use crate::{
     agents::heuristic::HeuristicAgent,
     game::{bidding_phase, deck, play_phase},
+    interface::game,
     model::{
         bidding::Bid,
         game::GamePhase,
@@ -69,23 +70,20 @@ impl Component for Oak {
     fn update(&mut self, action: Action) -> ShouldRender {
         let result = match action {
             Action::Play(card_id) => match self.state.phase {
-                GamePhase::Auction(_) => Err(anyhow!("Cannot play cards during auction phase")),
                 GamePhase::Playing(ref mut data) => {
                     play_phase::resolve_card_play_action(data, &*self.state.agent, card_id)
                 }
+                _ => Err(anyhow!("Can only play cards during the Play phase")),
             },
             Action::Continue => match self.state.phase {
-                GamePhase::Auction(_) => Err(anyhow!("Cannot continue during auction phase")),
                 GamePhase::Playing(ref mut data) => {
                     play_phase::resolve_continue_action(data, &*self.state.agent)
                 }
+                _ => Err(anyhow!("Can only continue during the Play phase")),
             },
-            Action::Bid(bid) => match self.state.phase {
-                GamePhase::Auction(ref mut game) => {
-                    bidding_phase::resolve_bid_action(game, &*self.state.agent, bid)
-                }
-                GamePhase::Playing(_) => Err(anyhow!("Cannot bid during play phase")),
-            },
+            Action::Bid(bid) => {
+                bidding_phase::resolve_bid_action(&mut self.state.phase, &*self.state.agent, bid)
+            }
         };
 
         if let Err(e) = result {
@@ -100,6 +98,10 @@ impl Component for Oak {
     }
 
     fn view(&self) -> Html {
-        super::game::render_game(&self.link, &self.state.phase)
+        match &self.state.phase {
+            GamePhase::Auction(game) => game::render_game(&self.link, game, None),
+            GamePhase::Playing(data) => game::render_game(&self.link, &data.game, Some(data)),
+            _ => html! {},
+        }
     }
 }

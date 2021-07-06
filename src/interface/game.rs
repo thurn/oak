@@ -25,7 +25,7 @@ use crate::{
         main::{Action, Oak},
     },
     model::{
-        game::{GamePhase, PlayPhaseData, Trick},
+        game::{GameData, GamePhase, PlayPhaseData, Trick},
         primitives::{Card, CardId, Position, Rank},
     },
 };
@@ -65,18 +65,19 @@ pub fn central_square(content: Html, on_click: OnClick) -> Html {
 /// the opponent hands
 pub fn hand_row(
     link: &ComponentLink<Oak>,
-    phase: &GamePhase,
+    game: &GameData,
+    play_phase: Option<&PlayPhaseData>,
     position: Position,
     hidden: bool,
 ) -> Html {
-    let legal_plays = match phase {
-        GamePhase::Auction(_) => HashSet::new(),
-        GamePhase::Playing(data) => play_phase::legal_plays(data, position)
+    let legal_plays = match play_phase {
+        Some(data) => play_phase::legal_plays(data, position)
             .map(|(index, _)| index)
             .collect::<HashSet<usize>>(),
+        _ => HashSet::new(),
     };
 
-    let content = phase.game().hand(position).iter().enumerate().map(|(index, card)| {
+    let content = game.hand(position).iter().enumerate().map(|(index, card)| {
         let callback = legal_plays
             .contains(&index)
             .then(|| link.callback(move |_| Action::Play(CardId::new(position, index))));
@@ -198,27 +199,31 @@ pub fn current_trick(trick: &Trick) -> Html {
 }
 
 /// Renders the full content for a Game
-pub fn render_game(link: &ComponentLink<Oak>, phase: &GamePhase) -> Html {
-    let (center_content, on_click, hide_dummy) = match phase {
-        GamePhase::Auction(game) => (bid::render_bidding(link, game), None, true),
-        GamePhase::Playing(data) => (
-            current_trick(&data.trick),
-            data.trick.is_completed().then(|| link.callback(|_| Action::Continue)),
+pub fn render_game(
+    link: &ComponentLink<Oak>,
+    game: &GameData,
+    play_phase: Option<&PlayPhaseData>,
+) -> Html {
+    let (center_content, on_click, hide_dummy) = match play_phase {
+        None => (bid::render_bidding(link, game), None, true),
+        Some(play_data) => (
+            current_trick(&play_data.trick),
+            play_data.trick.is_completed().then(|| link.callback(|_| Action::Continue)),
             false,
         ),
     };
 
     main_frame(html! {
         <>
-        {hand_row(link, phase, Position::Dummy, hide_dummy)}
+        {hand_row(link, game, play_phase, Position::Dummy, hide_dummy)}
         {middle_panel(html! {
             <>
-                {opponent_hand_column(phase.game().hand(Position::Left), true)}
+                {opponent_hand_column(game.hand(Position::Left), true)}
                 {central_square(center_content, on_click)}
-                {opponent_hand_column(phase.game().hand(Position::Right), true)}
+                {opponent_hand_column(game.hand(Position::Right), true)}
             </>
         })}
-        {hand_row(link, phase, Position::User, false)}
+        {hand_row(link, game, play_phase, Position::User, false)}
         </>
     })
 }

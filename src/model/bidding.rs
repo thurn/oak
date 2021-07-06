@@ -120,7 +120,7 @@ pub enum BidResponse {
     RankCount(Rank, usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AuctionTurn {
     pub bid: Bid,
     pub responses: Vec<BidResponse>,
@@ -151,7 +151,7 @@ impl Bidder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Auction {
     /// Number of tricks the auction winner must win
     pub bid_number: usize,

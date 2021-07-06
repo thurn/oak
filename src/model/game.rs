@@ -24,7 +24,7 @@ use crate::model::{
 };
 
 /// The current trick being played
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Trick {
     pub lead: Position,
     pub user_play: Option<Card>,
@@ -83,7 +83,7 @@ impl Trick {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Hands {
     pub user_hand: Vec<Card>,
     pub dummy_hand: Vec<Card>,
@@ -91,7 +91,7 @@ pub struct Hands {
     pub right_opponet_hand: Vec<Card>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameData {
     pub hands: Hands,
     pub auction: Auction,
@@ -117,7 +117,7 @@ impl GameData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Contract {
     pub trump: Option<Suit>,
     pub tricks: usize,
@@ -133,17 +133,9 @@ pub struct PlayPhaseData {
 
 #[derive(Debug)]
 pub enum GamePhase {
+    Starting,
     Auction(GameData),
     Playing(PlayPhaseData),
-}
-
-impl GamePhase {
-    pub fn game(&self) -> &GameData {
-        match self {
-            GamePhase::Auction(game) => game,
-            GamePhase::Playing(data) => &data.game,
-        }
-    }
 }
 
 #[cfg(test)]
