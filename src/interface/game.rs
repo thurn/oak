@@ -81,7 +81,13 @@ pub fn hand_row(
         let callback = legal_plays
             .contains(&index)
             .then(|| link.callback(move |_| Action::Play(CardId::new(position, index))));
-        card_in_hand(*card, hidden, CardOrientation::Vertical, callback)
+        card_in_hand(
+            *card,
+            hidden,
+            CardOrientation::Vertical,
+            callback,
+            game.debug.show_hidden_cards,
+        )
     });
 
     html! {
@@ -92,13 +98,14 @@ pub fn hand_row(
 }
 
 /// Renders a column showing opponents' hands
-pub fn opponent_hand_column(cards: &[Card], hidden: bool) -> Html {
+pub fn opponent_hand_column(cards: &[Card], show_hidden: bool) -> Html {
     html! {
         <div class="game__opponent-hand-column">
         {
             for cards
                 .iter()
-                .map(|card| card_in_hand(*card, hidden, CardOrientation::Horizontal, None))
+                .map(|card|
+                    card_in_hand(*card, true, CardOrientation::Horizontal, None, show_hidden))
         }
         </div>
     }
@@ -111,8 +118,13 @@ pub fn card_in_hand(
     hidden: bool,
     orientation: CardOrientation,
     on_click: OnClick,
+    show_hidden: bool,
 ) -> Html {
-    let content = if hidden { hidden_card(orientation) } else { visible_card(card, on_click) };
+    let content = if hidden {
+        hidden_card(card, orientation, show_hidden)
+    } else {
+        visible_card(card, on_click)
+    };
 
     html! {
         <div class="game__card-in-hand">
@@ -163,15 +175,26 @@ pub enum CardOrientation {
 }
 
 /// Renders a face-down card in a given [CardOrientation]
-pub fn hidden_card(orientation: CardOrientation) -> Html {
+pub fn hidden_card(card: Card, orientation: CardOrientation, show_hidden: bool) -> Html {
     let mut classes = classes!("game__hidden-card");
     classes.push(match orientation {
         CardOrientation::Vertical => "game__hidden-card--vertical",
         CardOrientation::Horizontal => "game__hidden-card--horizontal",
     });
+    let content = if show_hidden {
+        html! {
+            <div class="game__debug-card-info">
+                {card.rank} {card.suit}
+            </div>
+        }
+    } else {
+        html! {}
+    };
+
     html! {
         <div class=classes>
             <div class="game__hidden-card__card-back" />
+            {content}
         </div>
     }
 }
@@ -218,9 +241,9 @@ pub fn render_game(
         {hand_row(link, game, play_phase, Position::Dummy, hide_dummy)}
         {middle_panel(html! {
             <>
-                {opponent_hand_column(game.hand(Position::Left), true)}
+                {opponent_hand_column(game.hand(Position::Left), game.debug.show_hidden_cards)}
                 {central_square(center_content, on_click)}
-                {opponent_hand_column(game.hand(Position::Right), true)}
+                {opponent_hand_column(game.hand(Position::Right), game.debug.show_hidden_cards)}
             </>
         })}
         {hand_row(link, game, play_phase, Position::User, false)}

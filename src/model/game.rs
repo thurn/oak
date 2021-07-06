@@ -92,9 +92,21 @@ pub struct Hands {
 }
 
 #[derive(Debug, Clone)]
+pub struct Debug {
+    pub show_hidden_cards: bool,
+}
+
+impl Default for Debug {
+    fn default() -> Self {
+        Self { show_hidden_cards: false }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct GameData {
     pub hands: Hands,
     pub auction: Auction,
+    pub debug: Debug,
 }
 
 impl GameData {

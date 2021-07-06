@@ -22,7 +22,7 @@ use strum::IntoEnumIterator;
 
 use crate::model::{
     bidding::Auction,
-    game::{GameData, Hands, Trick},
+    game::{Debug, GameData, Hands, Trick},
     primitives::{Card, Position, Rank, Suit},
 };
 
@@ -51,6 +51,7 @@ pub fn new_game(rng: &mut impl Rng, first: Position, second: Position) -> GameDa
             right_opponet_hand: build_hand(&mut chunks),
         },
         auction: Auction { bid_number: 6, first, first_bids: vec![], second, second_bids: vec![] },
+        debug: Debug { show_hidden_cards: true },
     }
 }
 
