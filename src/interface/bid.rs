@@ -190,9 +190,16 @@ pub fn bid_history(auction: &Auction) -> Html {
     }
 
     html! {
+        <>
         <div class="bid__bid-history">
             {for content}
         </div>
+
+        <div class="bid__bidding-for">
+            <span class="bid__bidding-for__label">{"Bidding For:"}</span>
+            <span>{format!("{} tricks", auction.bid_number + 1)}</span>
+        </div>
+        </>
     }
 }
 

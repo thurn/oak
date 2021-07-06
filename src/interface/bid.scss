@@ -76,3 +76,15 @@
 .bid__response-content {
     align-items: center;
 }
+
+.bid__bidding-for {
+    background-color: white;
+    margin: 1vmin;
+    padding: 1vmin;
+    border-radius: 4px;
+}
+
+.bid__bidding-for__label {
+    font-weight: bold;
+    margin-right: 0.5vmin;
+}

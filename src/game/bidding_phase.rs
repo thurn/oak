@@ -550,7 +550,6 @@ mod tests {
         let gt3s = BidResponse::SuitLength(Suit::Spades, 3, LengthOperator::Gte);
         assert_eq!(get_dummy_response(Bid::Suit(Suit::Spades), vec![]), vec![gt3s]);
 
-        // Some(HandEvaluation::Fair)
         assert_eq!(
             get_dummy_response(
                 Bid::Suit(Suit::Spades),
