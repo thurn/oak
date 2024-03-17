@@ -1,0 +1,19 @@
+[package]
+name = "main"
+version = "0.0.0"
+homepage = "https://github.com/thurn/oak"
+description = ""
+license = "Apache-2.0"
+default-run = "oak"
+edition = "2021"
+
+[[bin]]
+name = "oak"
+path = "src/main.rs"
+test = false
+doctest = false
+
+[dependencies]
+
+[dev-dependencies]
+rusty-hook = "0.11.2"
