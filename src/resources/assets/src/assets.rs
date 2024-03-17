@@ -14,11 +14,6 @@
 
 use bevy::prelude::*;
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle::default());
-    commands.spawn(SpriteBundle { texture: assets::load_card(asset_server), ..default() });
-}
-
-fn main() {
-    App::new().add_plugins(DefaultPlugins).add_systems(Startup, setup).run();
+pub fn load_card(asset_server: Res<AssetServer>) -> Handle<Image> {
+    asset_server.load("cards/clubKing.png")
 }

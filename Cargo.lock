@@ -206,6 +206,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "assets"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "async-broadcast"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -294,7 +301,6 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "611dd99f412e862610adb43e2243b16436c6d8009f6d9dbe8ce3d6d840b34029"
 dependencies = [
- "bevy_dylib",
  "bevy_internal",
 ]
 
@@ -469,15 +475,6 @@ dependencies = [
  "bevy_utils",
  "const-fnv1a-hash",
  "sysinfo",
-]
-
-[[package]]
-name = "bevy_dylib"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3b3b76f0d7a4da8f944e5316f2d2d2af3bbb40d87508355993ea69afbc9411c"
-dependencies = [
- "bevy_internal",
 ]
 
 [[package]]
@@ -1386,6 +1383,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1aaf9b65849a68662ac6c0810c8893a765c960b907dd7cfab9c4a50bf764fbc"
 dependencies = [
  "const_soft_float",
+]
+
+[[package]]
+name = "core"
+version = "0.0.0"
+dependencies = [
+ "assets",
+ "bevy",
+ "rusty-hook",
 ]
 
 [[package]]
@@ -2318,14 +2324,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b955cdeb2a02b9117f121ce63aa52d08ade45de53e48fe6a38b39c10f6f709"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "main"
-version = "0.0.0"
-dependencies = [
- "bevy",
- "rusty-hook",
 ]
 
 [[package]]
