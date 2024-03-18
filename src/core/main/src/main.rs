@@ -14,11 +14,38 @@
 
 use bevy::prelude::*;
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let texture = asset_server.load("cards/sprite.png");
+    let layout = TextureAtlasLayout::from_grid(Vec2::new(75.0, 112.5), 14, 4, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(SpriteBundle { texture: assets::load_card(asset_server), ..default() });
+    commands.spawn(SpriteSheetBundle {
+        texture: texture.clone(),
+        atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 0 },
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+        ..default()
+    });
+    commands.spawn(SpriteSheetBundle {
+        texture: texture.clone(),
+        atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 1 },
+        transform: Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)),
+        ..default()
+    });
+    commands.spawn(SpriteSheetBundle {
+        texture: texture.clone(),
+        atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 2 },
+        transform: Transform::from_translation(Vec3::new(200.0, 0.0, 0.0)),
+        ..default()
+    });
 }
 
 fn main() {
-    App::new().add_plugins(DefaultPlugins).add_systems(Startup, setup).run();
+    App::new()
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_systems(Startup, setup)
+        .run();
 }
