@@ -1,0 +1,11 @@
+[package]
+name = "play_phase_data"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+path = "src/play_phase_data.rs"
+
+[dependencies]
+auction_phase_data = { path = "../auction_phase_data", version = "0.0.0" }
+primitives = { path = "../primitives", version = "0.0.0" }

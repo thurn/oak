@@ -1,0 +1,10 @@
+[package]
+name = "primitives"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+path = "src/primitives.rs"
+
+[dependencies]
+enum-iterator = "1.1.3"
