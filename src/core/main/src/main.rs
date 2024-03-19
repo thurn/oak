@@ -14,12 +14,14 @@
 
 #![allow(dead_code)]
 
+use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::window::WindowResized;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_row::LinearRow;
 use display_utils::plugin::DisplayUtilsPlugin;
+use play_phase_data::PlayPhaseData;
 use primitives::HandIdentifier;
 
 const MARKER_SIDE_LENGTH: f32 = 25.0;
@@ -74,30 +76,53 @@ impl MarkerBundle {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn(Camera2dBundle::default());
     let game = auction_phase_mutations::new_game(&mut rand::thread_rng());
-    let hand = game.hands.get(&HandIdentifier::South).unwrap();
-    let texture = asset_server.load("cards/sprite.png");
-    let layout = TextureAtlasLayout::from_grid(Vec2::new(75.0, 112.5), 14, 4, None, None);
-    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+    let card_atlas = CardAtlas::new(asset_server, texture_atlas_layouts);
+    spawn_hand(
+        &mut commands,
+        &game,
+        &card_atlas,
+        HandIdentifier::North,
+        Anchor::TopCenter,
+        VerticalAnchor::Top,
+    );
+    spawn_hand(
+        &mut commands,
+        &game,
+        &card_atlas,
+        HandIdentifier::North,
+        Anchor::BottomCenter,
+        VerticalAnchor::Bottom,
+    );
+}
+
+fn spawn_hand(
+    commands: &mut Commands,
+    game: &PlayPhaseData,
+    card_atlas: &CardAtlas,
+    identifier: HandIdentifier,
+    anchor: Anchor,
+    vertical_anchor: VerticalAnchor,
+) {
+    let mut hand = game.hands.get(&identifier).unwrap().iter().collect::<Vec<_>>();
+    hand.sort();
 
     let mut h = commands.spawn((
         SpatialBundle::default(),
-        AnchoredTransform {
-            horizontal: HorizontalAnchor::Center,
-            vertical: VerticalAnchor::Bottom,
-        },
+        AnchoredTransform { horizontal: HorizontalAnchor::Center, vertical: vertical_anchor },
     ));
     h.with_children(|parent| {
-        parent.spawn((SpatialBundle::default(), LinearRow { width: 230.0 })).with_children(
+        parent.spawn((SpatialBundle::default(), LinearRow { width: 225.0 })).with_children(
             |parent| {
-                for (i, _) in hand.iter().enumerate() {
+                for card in hand {
+                    let (texture, atlas) = card_atlas.get_card(*card);
                     parent.spawn(SpriteSheetBundle {
-                        texture: texture.clone(),
-                        atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: i },
-                        sprite: Sprite { anchor: Anchor::BottomCenter, ..default() },
+                        texture,
+                        atlas,
+                        sprite: Sprite { anchor, ..default() },
                         ..default()
                     });
                 }
@@ -105,73 +130,6 @@ fn setup(
         );
     });
 }
-
-// fn setup(
-//     mut commands: Commands,
-//     asset_server: Res<AssetServer>,
-//     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-// ) {
-//     let texture = asset_server.load("cards/sprite.png");
-//     let layout = TextureAtlasLayout::from_grid(Vec2::new(75.0, 112.5), 14, 4,
-// None, None);     let texture_atlas_layout =
-// texture_atlas_layouts.add(layout);     commands.
-// spawn(Camera2dBundle::default());     commands.spawn(SpriteSheetBundle {
-//         texture: texture.clone(),
-//         atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 0
-// },         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0))
-//             .with_rotation(Quat::from_euler(EulerRot::YXZ, 0.0, 0.0,
-// f32::to_radians(20.0))),         ..default()
-//     });
-//     commands.spawn(SpriteSheetBundle {
-//         texture: texture.clone(),
-//         atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 1
-// },         transform: Transform::from_translation(Vec3::new(100.0, 0.0, 0.0))
-//             .with_rotation(Quat::from_euler(EulerRot::YXZ,
-// f32::to_radians(20.0), 0.0, 0.0)),         ..default()
-//     });
-//     commands.spawn(SpriteSheetBundle {
-//         texture: texture.clone(),
-//         atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: 2
-// },         transform: Transform::from_translation(Vec3::new(200.0, 0.0, 0.0))
-//             .with_rotation(Quat::from_euler(EulerRot::YXZ, 0.0,
-// f32::to_radians(20.0), 0.0)),         ..default()
-//     });
-//
-//     let width = 1280.0;
-//     let height = 720.0;
-//
-//     //TOP LEFT
-//     commands.spawn(MarkerBundle::new(
-//         MarkerPosition::TopLeft,
-//         Transform::from_xyz(width / -2.0, height / 2.0, 0.0),
-//         Color::GREEN,
-//     ));
-//
-//     //BOTTOM LEFT
-//     commands.spawn(MarkerBundle::new(
-//         MarkerPosition::BottomLeft,
-//         Transform::from_xyz(width / -2.0, height / -2.0 + MARKER_SIDE_LENGTH,
-// 0.0),         Color::RED,
-//     ));
-//
-//     //TOP RIGHT
-//     commands.spawn(MarkerBundle::new(
-//         MarkerPosition::TopRight,
-//         Transform::from_xyz(width / 2.0 - MARKER_SIDE_LENGTH, height / 2.0,
-// 0.0),         Color::ORANGE,
-//     ));
-//
-//     //BOTTOM RIGHT
-//     commands.spawn(MarkerBundle::new(
-//         MarkerPosition::BottomRight,
-//         Transform::from_xyz(
-//             width / 2.0 - MARKER_SIDE_LENGTH,
-//             height / -2.0 + MARKER_SIDE_LENGTH,
-//             0.0,
-//         ),
-//         Color::PURPLE,
-//     ));
-// }
 
 fn on_resize_system(
     mut resize_reader: EventReader<WindowResized>,

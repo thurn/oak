@@ -7,4 +7,6 @@ edition = "2021"
 path = "src/assets.rs"
 
 [dependencies]
+primitives = { path = "../../data/primitives", version = "0.0.0" }
+
 bevy = "0.13"

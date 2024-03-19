@@ -216,6 +216,7 @@ name = "assets"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "primitives",
 ]
 
 [[package]]
@@ -1428,6 +1429,7 @@ dependencies = [
  "enum-iterator",
  "enum-kinds",
  "enumset",
+ "play_phase_data",
  "primitives",
  "rand",
  "rand_xoshiro",
