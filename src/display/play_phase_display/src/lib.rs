@@ -12,14 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bevy::app::{App, Plugin, Update};
-
-use crate::{anchored_transform, linear_display};
-
-pub struct DisplayUtilsPlugin;
-
-impl Plugin for DisplayUtilsPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, (anchored_transform::on_resize_system, linear_display::update));
-    }
-}
+pub mod play_phase_spawn;

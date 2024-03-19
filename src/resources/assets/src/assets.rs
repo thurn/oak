@@ -41,7 +41,11 @@ impl CardAtlas {
         }
     }
 
-    pub fn get_card(&self, card: Card) -> (Handle<Image>, TextureAtlas) {
+    pub fn get_card(&self, card: Card, visible: bool) -> (Handle<Image>, TextureAtlas) {
+        if !visible {
+            return (self.atlas.clone(), TextureAtlas { layout: self.layout.clone(), index: 41 });
+        }
+
         let suit_offset = match card.suit {
             Suit::Clubs => 0,
             Suit::Diamonds => 14,

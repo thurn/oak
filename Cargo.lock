@@ -1430,6 +1430,7 @@ dependencies = [
  "enum-kinds",
  "enumset",
  "play_phase_data",
+ "play_phase_display",
  "primitives",
  "rand",
  "rand_xoshiro",
@@ -2973,6 +2974,17 @@ name = "play_phase_data"
 version = "0.0.0"
 dependencies = [
  "auction_phase_data",
+ "primitives",
+]
+
+[[package]]
+name = "play_phase_display"
+version = "0.0.0"
+dependencies = [
+ "assets",
+ "bevy",
+ "display_utils",
+ "play_phase_data",
  "primitives",
 ]
 

@@ -13,5 +13,5 @@
 // limitations under the License.
 
 pub mod anchored_transform;
-pub mod linear_row;
+pub mod linear_display;
 pub mod plugin;
