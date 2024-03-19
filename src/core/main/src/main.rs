@@ -14,10 +14,11 @@
 
 #![allow(dead_code)]
 
-use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::window::WindowResized;
+
+use assets::CardAtlas;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_row::LinearRow;
 use display_utils::plugin::DisplayUtilsPlugin;
@@ -93,7 +94,7 @@ fn setup(
         &mut commands,
         &game,
         &card_atlas,
-        HandIdentifier::North,
+        HandIdentifier::South,
         Anchor::BottomCenter,
         VerticalAnchor::Bottom,
     );
