@@ -50,9 +50,9 @@ pub fn on_resize_system(
                 HorizontalAnchor::Right => width / 2.0,
             };
             let y = match anchored.vertical {
-                VerticalAnchor::Top => height / -2.0,
+                VerticalAnchor::Top => height / 2.0,
                 VerticalAnchor::Center => 0.0,
-                VerticalAnchor::Bottom => height / 2.0,
+                VerticalAnchor::Bottom => height / -2.0,
             };
             *transform = Transform::from_xyz(x, y, transform.translation.z);
         }

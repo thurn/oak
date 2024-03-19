@@ -15,7 +15,9 @@
 #![allow(dead_code)]
 
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 use bevy::window::WindowResized;
+use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_row::LinearRow;
 use display_utils::plugin::DisplayUtilsPlugin;
 use primitives::HandIdentifier;
@@ -81,22 +83,27 @@ fn setup(
     let layout = TextureAtlasLayout::from_grid(Vec2::new(75.0, 112.5), 14, 4, None, None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
-    commands
-        .spawn((
-            TransformBundle::default(),
-            VisibilityBundle::default(),
-            LinearRow { width: 400.0 },
-        ))
-        .with_children(|parent| {
-            for (i, _) in hand.iter().enumerate() {
-                println!("Spawning {i}");
-                parent.spawn(SpriteSheetBundle {
-                    texture: texture.clone(),
-                    atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: i },
-                    ..default()
-                });
-            }
-        });
+    let mut h = commands.spawn((
+        SpatialBundle::default(),
+        AnchoredTransform {
+            horizontal: HorizontalAnchor::Center,
+            vertical: VerticalAnchor::Bottom,
+        },
+    ));
+    h.with_children(|parent| {
+        parent.spawn((SpatialBundle::default(), LinearRow { width: 230.0 })).with_children(
+            |parent| {
+                for (i, _) in hand.iter().enumerate() {
+                    parent.spawn(SpriteSheetBundle {
+                        texture: texture.clone(),
+                        atlas: TextureAtlas { layout: texture_atlas_layout.clone(), index: i },
+                        sprite: Sprite { anchor: Anchor::BottomCenter, ..default() },
+                        ..default()
+                    });
+                }
+            },
+        );
+    });
 }
 
 // fn setup(
