@@ -1,7 +1,7 @@
 cargo-features = ["named-profiles"]
 
 [workspace]
-members = ["src/core/*", "src/data/*", "src/resources/*", "src/rules/auction_phase_mutations", "tests"]
+members = ["src/core/*", "src/data/*", "src/display/*", "src/resources/*", "src/rules/*", "tests"]
 resolver = "2"
 
 # Enable a small amount of optimization in debug mode

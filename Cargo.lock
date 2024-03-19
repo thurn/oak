@@ -1421,11 +1421,14 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "assets",
+ "auction_phase_mutations",
  "bevy",
  "convert_case",
+ "display_utils",
  "enum-iterator",
  "enum-kinds",
  "enumset",
+ "primitives",
  "rand",
  "rand_xoshiro",
  "rusty-hook",
@@ -1657,6 +1660,13 @@ name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
+
+[[package]]
+name = "display_utils"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+]
 
 [[package]]
 name = "dlib"

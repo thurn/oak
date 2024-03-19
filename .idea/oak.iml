@@ -9,6 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/data/primitives/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/resources/assets/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/rules/auction_phase_mutations/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/display/display_utils/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
