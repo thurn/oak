@@ -22,6 +22,7 @@ play_phase_data = { path = "../../data/play_phase_data", version = "0.0.0" }
 play_phase_display = { path = "../../display/play_phase_display", version = "0.0.0" }
 
 bevy = "0.13.0"
+bevy_mod_picking = "0.18"
 anyhow = "1.0.58"
 convert_case = "0.5.0"
 enum-iterator = "1.1.3"

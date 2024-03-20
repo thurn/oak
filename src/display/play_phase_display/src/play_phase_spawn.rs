@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use bevy_mod_picking::prelude::*;
+
+use assets::CardAtlas;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_display::{LinearDisplay, LinearDisplayDirection};
 use play_phase_data::PlayPhaseData;
@@ -55,14 +57,19 @@ pub fn spawn_hand(
         parent
             .spawn((SpatialBundle::default(), LinearDisplay { size: 225.0, direction }))
             .with_children(|parent| {
-                for card in hand {
-                    let (texture, atlas) = card_atlas.get_card(*card, card_visible);
-                    parent.spawn(SpriteSheetBundle {
-                        texture,
-                        atlas,
-                        sprite: Sprite { anchor: sprite_anchor, ..default() },
-                        ..default()
-                    });
+                for &card in hand {
+                    let (texture, atlas) = card_atlas.get_card(card, card_visible);
+                    parent.spawn((
+                        SpriteSheetBundle {
+                            texture,
+                            atlas,
+                            sprite: Sprite { anchor: sprite_anchor, ..default() },
+                            ..default()
+                        },
+                        On::<Pointer<Click>>::run(move || {
+                            println!("Clicked {}", card);
+                        }),
+                    ));
                 }
             });
     });

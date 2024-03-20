@@ -14,8 +14,10 @@
 
 #![allow(dead_code)]
 
-use assets::CardAtlas;
 use bevy::prelude::*;
+use bevy_mod_picking::DefaultPickingPlugins;
+
+use assets::CardAtlas;
 use display_utils::plugin::DisplayUtilsPlugin;
 use play_phase_display::play_phase_spawn;
 use primitives::HandIdentifier;
@@ -24,6 +26,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(DisplayUtilsPlugin)
+        .add_plugins(DefaultPickingPlugins)
         .add_systems(Startup, setup)
         .run();
 }

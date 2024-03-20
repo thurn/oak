@@ -10,3 +10,4 @@ primitives = { path = "../../data/primitives", version = "0.0.0" }
 play_phase_data = { path = "../../data/play_phase_data", version = "0.0.0" }
 
 bevy = "0.13.0"
+bevy_mod_picking = "0.18"
