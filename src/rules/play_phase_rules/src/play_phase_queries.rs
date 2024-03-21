@@ -25,7 +25,7 @@ pub fn next_to_play(data: &PlayPhaseData) -> HandIdentifier {
                 data.contract.declarer.primary_hand()
             }
         }
-        1 | 2 | 3 => data.current_trick.cards.last().unwrap().played_by.next(),
+        1..=3 => data.current_trick.cards.last().unwrap().played_by.next(),
         4 => trick_winner(&data.current_trick),
         _ => panic!("Invalid trick size"),
     }
