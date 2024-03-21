@@ -3167,6 +3167,7 @@ name = "play_phase_data"
 version = "0.0.0"
 dependencies = [
  "auction_phase_data",
+ "bevy",
  "primitives",
 ]
 
@@ -3179,7 +3180,19 @@ dependencies = [
  "bevy_mod_picking",
  "display_utils",
  "play_phase_data",
+ "play_phase_rules",
  "primitives",
+]
+
+[[package]]
+name = "play_phase_rules"
+version = "0.0.0"
+dependencies = [
+ "auction_phase_data",
+ "enum-iterator",
+ "play_phase_data",
+ "primitives",
+ "rand",
 ]
 
 [[package]]

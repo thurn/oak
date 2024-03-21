@@ -152,3 +152,17 @@ pub enum PlayerName {
     User,
     Opponent,
 }
+
+impl PlayerName {
+    /// Returns the hand which this player can see at the beginning of the
+    /// auction phase.
+    ///
+    /// Also the hand which gets the lead for the first trick of a round when
+    /// this player is the declarer.
+    pub fn primary_hand(&self) -> HandIdentifier {
+        match self {
+            PlayerName::User => HandIdentifier::South,
+            PlayerName::Opponent => HandIdentifier::West,
+        }
+    }
+}

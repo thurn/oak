@@ -1,0 +1,12 @@
+[package]
+name = "play_phase_rules"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+auction_phase_data = { path = "../../data/auction_phase_data", version = "0.0.0" }
+play_phase_data = { path = "../../data/play_phase_data", version = "0.0.0" }
+primitives = { path = "../../data/primitives", version = "0.0.0" }
+
+enum-iterator = "1.1.3"
+rand = { version = "0.8.5", features = ["serde1"] }

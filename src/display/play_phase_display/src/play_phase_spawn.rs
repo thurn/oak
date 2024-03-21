@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy_mod_picking::prelude::*;
-
-use assets::CardAtlas;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_display::{LinearDisplay, LinearDisplayDirection};
 use play_phase_data::PlayPhaseData;
+use play_phase_rules::play_phase_actions;
 use primitives::HandIdentifier;
 
 pub fn spawn_hand(
@@ -66,8 +66,13 @@ pub fn spawn_hand(
                             sprite: Sprite { anchor: sprite_anchor, ..default() },
                             ..default()
                         },
-                        On::<Pointer<Click>>::run(move || {
+                        On::<Pointer<Click>>::run(move |data: ResMut<PlayPhaseData>| {
                             println!("Clicked {}", card);
+                            play_phase_actions::play_card_if_able(
+                                data.into_inner(),
+                                identifier,
+                                card,
+                            );
                         }),
                     ));
                 }

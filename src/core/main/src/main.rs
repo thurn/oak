@@ -14,10 +14,9 @@
 
 #![allow(dead_code)]
 
+use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy_mod_picking::DefaultPickingPlugins;
-
-use assets::CardAtlas;
 use display_utils::plugin::DisplayUtilsPlugin;
 use play_phase_display::play_phase_spawn;
 use primitives::HandIdentifier;
@@ -44,4 +43,5 @@ fn setup(
     play_phase_spawn::spawn_hand(&mut commands, &game, &card_atlas, HandIdentifier::East);
     play_phase_spawn::spawn_hand(&mut commands, &game, &card_atlas, HandIdentifier::South);
     play_phase_spawn::spawn_hand(&mut commands, &game, &card_atlas, HandIdentifier::West);
+    commands.insert_resource(game);
 }

@@ -15,9 +15,10 @@
 use std::collections::{HashMap, HashSet};
 
 use auction_phase_data::Contract;
+use bevy::prelude::*;
 use primitives::{Card, HandIdentifier};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Resource)]
 pub struct PlayPhaseData {
     pub hands: HashMap<HandIdentifier, HashSet<Card>>,
     pub current_trick: Trick,
