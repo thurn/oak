@@ -18,11 +18,13 @@ use bevy::sprite::Anchor;
 use bevy_mod_picking::prelude::*;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_display::{LinearDisplay, LinearDisplayDirection};
-use play_phase_data::PlayPhaseData;
-use play_phase_rules::play_phase_actions;
-use primitives::HandIdentifier;
+use play_phase_data::{PlayPhaseAction, PlayPhaseData};
+use play_phase_rules::{play_phase_actions, play_phase_flags};
+use primitives::{HandIdentifier, PlayerName};
 
-pub fn spawn_hand(
+use crate::play_phase_events::PlayPhaseUpdateEvent;
+
+pub fn spawn(
     commands: &mut Commands,
     game: &PlayPhaseData,
     card_atlas: &CardAtlas,
@@ -56,25 +58,31 @@ pub fn spawn_hand(
     h.with_children(|parent| {
         parent
             .spawn((SpatialBundle::default(), LinearDisplay { size: 225.0, direction }))
-            .with_children(|parent| {
+            .with_children(|disp| {
                 for &card in hand {
                     let (texture, atlas) = card_atlas.get_card(card, card_visible);
-                    parent.spawn((
-                        SpriteSheetBundle {
-                            texture,
-                            atlas,
-                            sprite: Sprite { anchor: sprite_anchor, ..default() },
-                            ..default()
+                    disp.spawn((
+                    SpriteSheetBundle {
+                        texture,
+                        atlas,
+                        sprite: Sprite { anchor: sprite_anchor, ..default() },
+                        ..default()
+                    },
+                    On::<Pointer<Click>>::run(
+                        move |mut data: ResMut<PlayPhaseData>,
+                              mut updates: EventWriter<PlayPhaseUpdateEvent>| {
+                            println!("Click {card}");
+                            if play_phase_flags::can_play_card(&data, identifier, card) {
+                                println!("can_play {card}");
+                                play_phase_actions::handle_action(
+                                    &mut data,
+                                    PlayPhaseAction::PlayCard(PlayerName::User, identifier, card),
+                                );
+                                updates.send(PlayPhaseUpdateEvent);
+                            }
                         },
-                        On::<Pointer<Click>>::run(move |data: ResMut<PlayPhaseData>| {
-                            println!("Clicked {}", card);
-                            play_phase_actions::play_card_if_able(
-                                data.into_inner(),
-                                identifier,
-                                card,
-                            );
-                        }),
-                    ));
+                    ),
+                ));
                 }
             });
     });

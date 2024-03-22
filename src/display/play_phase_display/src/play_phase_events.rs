@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bevy::app::{App, Plugin, Update};
+use bevy::prelude::*;
+use play_phase_data::PlayPhaseData;
 
-use crate::play_phase_events::PlayPhaseUpdateEvent;
+#[derive(Event)]
+pub struct PlayPhaseUpdateEvent;
 
-pub mod play_phase_events;
-pub mod play_phase_spawn;
-
-pub struct PlayPhaseDisplayPlugin;
-
-impl Plugin for PlayPhaseDisplayPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<PlayPhaseUpdateEvent>().add_systems(Update, play_phase_events::sync_state);
+pub fn sync_state(_data: Res<PlayPhaseData>, mut updates: EventReader<PlayPhaseUpdateEvent>) {
+    for _ in updates.read() {
+        println!("PlayPhaseUpdate");
     }
 }

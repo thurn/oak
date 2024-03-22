@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 
 use auction_phase_data::Contract;
 use bevy::prelude::*;
-use primitives::{Card, HandIdentifier};
+use primitives::{Card, HandIdentifier, PlayerName};
 
 #[derive(Debug, Clone, Resource)]
 pub struct PlayPhaseData {
@@ -47,4 +47,9 @@ pub struct PlayedCard {
     pub played_by: HandIdentifier,
     /// Card which was played
     pub card: Card,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PlayPhaseAction {
+    PlayCard(PlayerName, HandIdentifier, Card),
 }
