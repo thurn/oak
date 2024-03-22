@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy_mod_picking::prelude::*;
+
+use assets::CardAtlas;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_display::{LinearDisplay, LinearDisplayDirection};
+use display_utils::object_display::{ObjectDisplay, ObjectDisplayPosition};
 use play_phase_data::{PlayPhaseAction, PlayPhaseData};
 use play_phase_rules::{play_phase_actions, play_phase_flags};
-use primitives::{HandIdentifier, PlayerName};
+use primitives::{Card, HandIdentifier, PlayerName};
 
 use crate::play_phase_events::PlayPhaseUpdateEvent;
+
+#[derive(Component)]
+pub struct CardComponent(Card);
 
 pub fn spawn(
     commands: &mut Commands,
@@ -53,37 +58,56 @@ pub fn spawn(
         HandIdentifier::West => Anchor::CenterRight,
     };
 
-    let mut h =
-        commands.spawn((SpatialBundle::default(), AnchoredTransform { horizontal, vertical }));
-    h.with_children(|parent| {
-        parent
-            .spawn((SpatialBundle::default(), LinearDisplay { size: 225.0, direction }))
-            .with_children(|disp| {
-                for &card in hand {
-                    let (texture, atlas) = card_atlas.get_card(card, card_visible);
-                    disp.spawn((
-                    SpriteSheetBundle {
-                        texture,
-                        atlas,
-                        sprite: Sprite { anchor: sprite_anchor, ..default() },
-                        ..default()
-                    },
-                    On::<Pointer<Click>>::run(
-                        move |mut data: ResMut<PlayPhaseData>,
-                              mut updates: EventWriter<PlayPhaseUpdateEvent>| {
-                            println!("Click {card}");
-                            if play_phase_flags::can_play_card(&data, identifier, card) {
-                                println!("can_play {card}");
-                                play_phase_actions::handle_action(
-                                    &mut data,
-                                    PlayPhaseAction::PlayCard(PlayerName::User, identifier, card),
-                                );
-                                updates.send(PlayPhaseUpdateEvent);
-                            }
-                        },
-                    ),
-                ));
-                }
-            });
-    });
+    commands
+        .spawn((SpatialBundle::default(), AnchoredTransform { horizontal, vertical }))
+        .with_children(|parent| {
+            parent.spawn((
+                ObjectDisplay { position: ObjectDisplayPosition::InHand(identifier) },
+                SpatialBundle::default(),
+                LinearDisplay { size: 225.0, direction },
+            ));
+        });
+
+    commands
+        .spawn((
+            SpatialBundle::default(),
+            AnchoredTransform {
+                horizontal: HorizontalAnchor::Center,
+                vertical: VerticalAnchor::Center,
+            },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                ObjectDisplay { position: ObjectDisplayPosition::InTrick(identifier) },
+                SpatialBundle::default(),
+                LinearDisplay { size: 50.0, direction: LinearDisplayDirection::Vertical },
+            ));
+        });
+
+    for &card in hand {
+        let (texture, atlas) = card_atlas.get_card(card, card_visible);
+        commands.spawn((
+            CardComponent(card),
+            SpriteSheetBundle {
+                texture,
+                atlas,
+                sprite: Sprite { anchor: sprite_anchor, ..default() },
+                ..default()
+            },
+            On::<Pointer<Click>>::run(
+                move |mut data: ResMut<PlayPhaseData>,
+                      mut updates: EventWriter<PlayPhaseUpdateEvent>| {
+                    println!("Click {card}");
+                    if play_phase_flags::can_play_card(&data, identifier, card) {
+                        println!("can_play {card}");
+                        play_phase_actions::handle_action(
+                            &mut data,
+                            PlayPhaseAction::PlayCard(PlayerName::User, identifier, card),
+                        );
+                        updates.send(PlayPhaseUpdateEvent);
+                    }
+                },
+            ),
+        ));
+    }
 }

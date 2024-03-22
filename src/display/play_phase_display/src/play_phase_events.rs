@@ -13,13 +13,21 @@
 // limitations under the License.
 
 use bevy::prelude::*;
+
 use play_phase_data::PlayPhaseData;
+
+use crate::play_phase_spawn::CardComponent;
 
 #[derive(Event)]
 pub struct PlayPhaseUpdateEvent;
 
-pub fn sync_state(_data: Res<PlayPhaseData>, mut updates: EventReader<PlayPhaseUpdateEvent>) {
-    for _ in updates.read() {
-        println!("PlayPhaseUpdate");
+pub fn sync_state(
+    mut commands: Commands,
+    _data: Res<PlayPhaseData>,
+    mut updates: EventReader<PlayPhaseUpdateEvent>,
+    cards: Query<&CardComponent>,
+) {
+    if !updates.is_empty() {
+        updates.clear();
     }
 }

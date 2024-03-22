@@ -1862,6 +1862,7 @@ name = "display_utils"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "primitives",
 ]
 
 [[package]]

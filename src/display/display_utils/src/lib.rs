@@ -14,4 +14,5 @@
 
 pub mod anchored_transform;
 pub mod linear_display;
+pub mod object_display;
 pub mod plugin;
