@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use assets::CardAtlas;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy_mod_picking::prelude::*;
-
-use assets::CardAtlas;
 use display_utils::anchored_transform::{AnchoredTransform, HorizontalAnchor, VerticalAnchor};
 use display_utils::linear_display::{LinearDisplay, LinearDisplayDirection};
 use display_utils::object_display::{ObjectDisplay, ObjectDisplayPosition};

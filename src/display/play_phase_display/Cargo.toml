@@ -12,3 +12,4 @@ play_phase_rules = { path = "../../rules/play_phase_rules", version = "0.0.0" }
 
 bevy = "0.13.0"
 bevy_mod_picking = "0.18"
+enum-iterator = "1.1.3"

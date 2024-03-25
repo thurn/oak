@@ -26,6 +26,12 @@ pub struct PlayPhaseData {
     pub contract: Contract,
 }
 
+impl PlayPhaseData {
+    pub fn hand(&self, identifier: HandIdentifier) -> impl Iterator<Item = Card> + '_ {
+        self.hands.get(&identifier).unwrap().iter().copied()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompletedTrick {
     /// Cards which were played in this trick.

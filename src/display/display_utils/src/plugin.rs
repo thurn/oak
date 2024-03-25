@@ -14,12 +14,15 @@
 
 use bevy::app::{App, Plugin, Update};
 
-use crate::{anchored_transform, linear_display};
+use crate::{anchored_transform, linear_display, object_display};
 
 pub struct DisplayUtilsPlugin;
 
 impl Plugin for DisplayUtilsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (anchored_transform::on_resize_system, linear_display::update));
+        app.add_systems(
+            Update,
+            (anchored_transform::on_resize_system, linear_display::update, object_display::update),
+        );
     }
 }

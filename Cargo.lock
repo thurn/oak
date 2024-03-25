@@ -3180,6 +3180,7 @@ dependencies = [
  "bevy",
  "bevy_mod_picking",
  "display_utils",
+ "enum-iterator",
  "play_phase_data",
  "play_phase_rules",
  "primitives",

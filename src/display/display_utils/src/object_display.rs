@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use bevy::prelude::*;
-
 use primitives::HandIdentifier;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -29,12 +28,13 @@ pub struct Displayable {
     pub position: ObjectDisplayPosition,
     /// Determines Z index for displayed items.
     ///
-    /// Objects with higher sorting_key numbers will be rendered on top of lower numbers.
+    /// Objects with higher sorting_key numbers will be rendered on top of lower
+    /// numbers.
     pub sorting_key: usize,
 }
 
-/// Marks entities which perform layout on their children in world space. Children must have a
-/// [Displayable] component attached to participate.
+/// Marks entities which perform layout on their children in world space.
+/// Children must have a [Displayable] component attached to participate.
 #[derive(Component)]
 pub struct ObjectDisplay {
     /// Uniquely identifies this ObjectDisplay and indicates its position.
@@ -46,7 +46,7 @@ pub fn update(
     displays: Query<(Entity, &ObjectDisplay)>,
     displayables: Query<(Entity, &Displayable)>,
 ) {
-    for (child, displayable) in displayables {
+    for (child, displayable) in &displayables {
         if let Some((parent, _)) =
             displays.iter().find(|(_, display)| display.position == displayable.position)
         {

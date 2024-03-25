@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use bevy::prelude::*;
-
 use play_phase_data::PlayPhaseData;
+use primitives::HandIdentifier;
 
 use crate::play_phase_spawn::CardComponent;
 
@@ -23,11 +23,14 @@ pub struct PlayPhaseUpdateEvent;
 
 pub fn sync_state(
     mut commands: Commands,
-    _data: Res<PlayPhaseData>,
+    data: Res<PlayPhaseData>,
     mut updates: EventReader<PlayPhaseUpdateEvent>,
     cards: Query<&CardComponent>,
 ) {
     if !updates.is_empty() {
         updates.clear();
+        for identifier in enum_iterator::all::<HandIdentifier>() {
+            // for card in data.hand(identifier) {}
+        }
     }
 }
