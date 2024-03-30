@@ -15,7 +15,7 @@
 use bevy::prelude::*;
 use primitives::HandIdentifier;
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Ord, PartialOrd)]
 pub enum ObjectDisplayPosition {
     InHand(HandIdentifier),
     InTrick(HandIdentifier),
@@ -23,7 +23,7 @@ pub enum ObjectDisplayPosition {
 }
 
 /// Identifies a world space position to which a game object can be moved.
-#[derive(Component)]
+#[derive(Component, Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct Displayable {
     /// Anchor position within the world at which to place this object
     pub position: ObjectDisplayPosition,
@@ -44,17 +44,20 @@ pub struct ObjectDisplay {
 
 pub fn update(
     mut commands: Commands,
-    displays: Query<(Entity, &ObjectDisplay)>,
-    displayables: Query<(Entity, &Displayable)>,
+    parent_query: Query<(Entity, &ObjectDisplay)>,
+    children_query: Query<(Entity, &Displayable)>,
 ) {
+    let mut displayables = children_query.iter().collect::<Vec<_>>();
+    displayables.sort_by_key(|(_, d)| *d);
+    for (parent, _) in &parent_query {
+        commands.entity(parent).clear_children();
+    }
+
     for (child, displayable) in &displayables {
         if let Some((parent, _)) =
-            displays.iter().find(|(_, display)| display.position == displayable.position)
+            parent_query.iter().find(|(_, display)| display.position == displayable.position)
         {
-            commands
-                .get_entity(parent)
-                .expect("Parent not found")
-                .insert_children(displayable.sorting_key, &[child]);
+            commands.entity(parent).add_child(*child);
         }
     }
 }

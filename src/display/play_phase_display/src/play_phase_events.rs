@@ -28,11 +28,17 @@ pub fn sync_state(
     mut updates: EventReader<PlayPhaseUpdateEvent>,
     cards: Query<(&CardComponent, Entity)>,
 ) {
+    let mut to_update = vec![];
     if !updates.is_empty() {
         updates.clear();
         for (card, entity) in cards.iter() {
-            commands.entity(entity).insert(card_position(&data, card.data));
+            to_update.push((entity, card_position(&data, card.data)));
         }
+    }
+
+    to_update.sort_by_key(|(_, d)| *d);
+    for (entity, displayable) in to_update {
+        commands.entity(entity).insert(displayable);
     }
 }
 

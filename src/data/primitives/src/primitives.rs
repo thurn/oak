@@ -105,7 +105,7 @@ impl Card {
 }
 
 /// Represents one of the four hands in an Oak game.
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Sequence)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Sequence, Ord, PartialOrd)]
 pub enum HandIdentifier {
     /// Dummy partner of human player
     North,
