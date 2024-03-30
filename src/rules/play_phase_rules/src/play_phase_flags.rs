@@ -17,7 +17,6 @@ use primitives::{Card, HandIdentifier};
 
 use crate::play_phase_queries;
 
-/// Can the `hand` player currently play the indicated `card`?
 pub fn can_play_card(data: &PlayPhaseData, hand: HandIdentifier, card: Card) -> bool {
     if play_phase_queries::next_to_play(data) != hand {
         return false;

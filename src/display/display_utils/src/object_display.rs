@@ -19,6 +19,7 @@ use primitives::HandIdentifier;
 pub enum ObjectDisplayPosition {
     InHand(HandIdentifier),
     InTrick(HandIdentifier),
+    CompletedTrick,
 }
 
 /// Identifies a world space position to which a game object can be moved.
@@ -50,7 +51,10 @@ pub fn update(
         if let Some((parent, _)) =
             displays.iter().find(|(_, display)| display.position == displayable.position)
         {
-            commands.get_entity(parent).unwrap().insert_children(displayable.sorting_key, &[child]);
+            commands
+                .get_entity(parent)
+                .expect("Parent not found")
+                .insert_children(displayable.sorting_key, &[child]);
         }
     }
 }

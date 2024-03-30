@@ -26,7 +26,9 @@ use primitives::{Card, HandIdentifier, PlayerName};
 use crate::play_phase_events::PlayPhaseUpdateEvent;
 
 #[derive(Component)]
-pub struct CardComponent(Card);
+pub struct CardComponent {
+    pub data: Card,
+}
 
 pub fn spawn(
     commands: &mut Commands,
@@ -38,13 +40,13 @@ pub fn spawn(
     hand.sort();
     let (horizontal, vertical) = match identifier {
         HandIdentifier::North => (HorizontalAnchor::Center, VerticalAnchor::Top),
-        HandIdentifier::East => (HorizontalAnchor::Left, VerticalAnchor::Center),
+        HandIdentifier::East => (HorizontalAnchor::Right, VerticalAnchor::Center),
         HandIdentifier::South => (HorizontalAnchor::Center, VerticalAnchor::Bottom),
-        HandIdentifier::West => (HorizontalAnchor::Right, VerticalAnchor::Center),
+        HandIdentifier::West => (HorizontalAnchor::Left, VerticalAnchor::Center),
     };
     let card_visible = match identifier {
         HandIdentifier::North | HandIdentifier::South => true,
-        HandIdentifier::East | HandIdentifier::West => false,
+        HandIdentifier::East | HandIdentifier::West => true,
     };
     let direction = match identifier {
         HandIdentifier::North | HandIdentifier::South => LinearDisplayDirection::Horizontal,
@@ -52,9 +54,9 @@ pub fn spawn(
     };
     let sprite_anchor = match identifier {
         HandIdentifier::North => Anchor::TopCenter,
-        HandIdentifier::East => Anchor::CenterLeft,
+        HandIdentifier::East => Anchor::CenterRight,
         HandIdentifier::South => Anchor::BottomCenter,
-        HandIdentifier::West => Anchor::CenterRight,
+        HandIdentifier::West => Anchor::CenterLeft,
     };
 
     commands
@@ -86,7 +88,7 @@ pub fn spawn(
     for &card in hand {
         let (texture, atlas) = card_atlas.get_card(card, card_visible);
         commands.spawn((
-            CardComponent(card),
+            CardComponent { data: card },
             SpriteSheetBundle {
                 texture,
                 atlas,
@@ -96,9 +98,7 @@ pub fn spawn(
             On::<Pointer<Click>>::run(
                 move |mut data: ResMut<PlayPhaseData>,
                       mut updates: EventWriter<PlayPhaseUpdateEvent>| {
-                    println!("Click {card}");
                     if play_phase_flags::can_play_card(&data, identifier, card) {
-                        println!("can_play {card}");
                         play_phase_actions::handle_action(
                             &mut data,
                             PlayPhaseAction::PlayCard(PlayerName::User, identifier, card),
